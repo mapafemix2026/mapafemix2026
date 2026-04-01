@@ -11,131 +11,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* (estilos idênticos – omitidos por brevidade, mantidos do código anterior) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #f0ece6;
-            font-family: 'Inter', sans-serif;
-            color: #1e2a2f;
-            padding: 1.5rem;
-        }
+        body { background: #f0ece6; font-family: 'Inter', sans-serif; color: #1e2a2f; padding: 1.5rem; }
         .dashboard-container { max-width: 1600px; margin: 0 auto; }
-        .femix-header {
-            background: linear-gradient(135deg, #0B2B40, #1A4A5F);
-            border-radius: 28px;
-            padding: 1rem 2rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+        .femix-header { background: linear-gradient(135deg, #0B2B40, #1A4A5F); border-radius: 28px; padding: 1rem 2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-simbolo {
-            background: #FFC107;
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: 800;
-            color: #0B2B40;
-        }
+        .logo-simbolo { background: #FFC107; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #0B2B40; }
         .logo-texto h2 { color: white; font-size: 1.6rem; }
         .logo-texto p { color: #FFE6B0; font-size: 0.7rem; }
-        .mode-badge {
-            background: rgba(255,255,255,0.15);
-            padding: 6px 16px;
-            border-radius: 40px;
-            color: #FFE0A3;
-            font-size: 0.8rem;
-        }
-        .admin-login-btn {
-            background: #E67E22;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 40px;
-            color: white;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .status-bar {
-            background: white;
-            border-radius: 16px;
-            padding: 0.8rem 1.5rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            border-left: 4px solid #2E7A6E;
-        }
+        .mode-badge { background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 40px; color: #FFE0A3; font-size: 0.8rem; }
+        .admin-login-btn { background: #E67E22; border: none; padding: 6px 16px; border-radius: 40px; color: white; cursor: pointer; margin-left: 10px; }
+        .status-bar { background: white; border-radius: 16px; padding: 0.8rem 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; flex-wrap: wrap; border-left: 4px solid #2E7A6E; }
         .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
         .badge-public { background: #3498DB; color: white; }
         .badge-admin { background: #2E7A6E; color: white; }
         .action-buttons { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
-        .btn {
-            padding: 10px 22px;
-            border-radius: 40px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .btn { padding: 10px 22px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary { background: #FFC107; color: #0B2B40; }
         .btn-pdf { background: #c0392b; color: white; }
         .btn-secondary { background: #1A4A5F; color: white; }
         .btn-success { background: #2E7A6E; color: white; }
         .btn-warning { background: #E67E22; color: white; }
         .btn-info { background: #3498DB; color: white; }
-
-        .search-box {
-            display: flex;
-            align-items: center;
-            background: #f7f3ec;
-            border-radius: 40px;
-            padding: 6px 18px;
-            gap: 8px;
-        }
-        .search-box input {
-            border: none;
-            background: transparent;
-            outline: none;
-            padding: 6px 0;
-            width: 200px;
-        }
-        .filter-select {
-            padding: 6px 12px;
-            border-radius: 40px;
-            border: 1px solid #e8dccc;
-            background: #f7f3ec;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.8rem;
-            cursor: pointer;
-        }
-
-        .maps-gallery, .map-container, .chart-card, .data-section {
-            background: white;
-            border-radius: 28px;
-            padding: 1.2rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid #e8dccc;
-        }
+        .search-box { display: flex; align-items: center; background: #f7f3ec; border-radius: 40px; padding: 6px 18px; gap: 8px; }
+        .search-box input { border: none; background: transparent; outline: none; padding: 6px 0; width: 200px; }
+        .filter-select { padding: 6px 12px; border-radius: 40px; border: 1px solid #e8dccc; background: #f7f3ec; font-family: 'Inter', sans-serif; font-size: 0.8rem; cursor: pointer; }
+        .maps-gallery, .map-container, .chart-card, .data-section { background: white; border-radius: 28px; padding: 1.2rem; margin-bottom: 1.5rem; border: 1px solid #e8dccc; }
         .maps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1rem; }
         .map-card-image img { width: 100%; border-bottom: 2px solid #FFC107; border-radius: 16px 16px 0 0; }
         .map-card-image { background: #faf7f2; border-radius: 20px; overflow: hidden; }
         .map-caption { padding: 0.5rem; text-align: center; font-size: 0.75rem; }
-
         .map-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1rem; }
-        .map-location {
-            background: #fefcf9;
-            border-radius: 20px;
-            padding: 1rem;
-            cursor: pointer;
-            border: 1px solid #e8dccc;
-            transition: all 0.2s;
-        }
+        .map-location { background: #fefcf9; border-radius: 20px; padding: 1rem; cursor: pointer; border: 1px solid #e8dccc; transition: all 0.2s; }
         .map-location.selected { border: 2px solid #FFC107; background: #fffaf0; }
         .location-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .location-name { font-weight: 800; color: #1A4A5F; }
@@ -146,31 +54,17 @@
         .badge-contrato { background: #D4EDDA; color: #155724; padding: 2px 8px; border-radius: 20px; }
         .badge-disponivel { background: #F8D7DA; color: #721C24; padding: 2px 8px; border-radius: 20px; }
         .warning-icon { color: #E67E22; margin-left: 5px; font-size: 0.7rem; cursor: help; }
-
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .kpi-card {
-            background: white;
-            border-radius: 24px;
-            padding: 1rem;
-            border: 1px solid #e8dccc;
-        }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .kpi-card { background: white; border-radius: 24px; padding: 1rem; border: 1px solid #e8dccc; }
         .kpi-value { font-size: 1.8rem; font-weight: 800; color: #0B2B40; }
-
         .situacao-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
         .situacao-table th, .situacao-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #f0e6d8; }
         .situacao-table th { background: #F9F1E8; }
-
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
         th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #f0e6d8; }
         .editable-cell { cursor: pointer; background: #fffef7; }
         .public-view { cursor: default; }
-
         .footer { text-align: center; font-size: 0.7rem; color: #9b8e7a; margin-top: 1rem; }
         .toast-message { position: fixed; bottom: 20px; right: 20px; background: #2E7A6E; color: white; padding: 12px 20px; border-radius: 40px; z-index: 2000; display: none; }
         .admin-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
@@ -181,33 +75,10 @@
         #editModal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 3000; }
         #editModal > div { background: white; border-radius: 32px; padding: 1.5rem; width: 90%; max-width: 500px; }
         #editModal input, #editModal select, #editModal datalist { width: 100%; margin: 8px 0; padding: 8px; border-radius: 28px; border: 1px solid #e8dccc; }
-
-        .charts-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .chart-card-pie {
-            flex: 0.6;
-            background: white;
-            border-radius: 28px;
-            padding: 1rem;
-            border: 1px solid #e8dccc;
-        }
-        .chart-card-gauge {
-            flex: 1.4;
-            background: white;
-            border-radius: 28px;
-            padding: 1rem;
-            border: 1px solid #e8dccc;
-            text-align: center;
-        }
-        @media (max-width: 768px) {
-            .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; }
-            .action-buttons { flex-direction: column; align-items: stretch; }
-            .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; }
-        }
+        .charts-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .chart-card-pie { flex: 0.6; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; }
+        .chart-card-gauge { flex: 1.4; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; text-align: center; }
+        @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } .action-buttons { flex-direction: column; align-items: stretch; } .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; } }
     </style>
 </head>
 <body>
@@ -293,7 +164,7 @@
         </div>
 
         <!-- Tabela situação por local -->
-        <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody>          </table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
+        <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody>           </table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
 
         <!-- Tabela empresas editável com filtros e totais -->
         <div class="data-section">
@@ -347,9 +218,9 @@
 
     <script>
         // ========== CONFIGURAÇÕES DO GITHUB (CORRETAS) ==========
-        const GITHUB_OWNER = "mapafemix2026";     // seu nome de usuário
+        const GITHUB_OWNER = "mapafemix2026";
         const GITHUB_TOKEN = "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";
-        const REPO_NAME = "femix-dados";           // repositório dos dados
+        const REPO_NAME = "femix-dados";
 
         // ========== CAPACIDADES ==========
         const locationCapacities = {
@@ -422,7 +293,7 @@
         let currentSortOrder = "asc";
         let editMode = false;
         let piePercentChart, gaugeChart;
-        let currentEditIdx = null;
+        let currentEditOriginalIdx = null;  // guarda o índice original da empresa sendo editada
         const ADMIN_USER = "sandra";
         const ADMIN_PASS = "livia2011";
 
@@ -446,11 +317,13 @@
                     if (showMsg) showToast("✅ Dados salvos no GitHub!", false);
                     return true;
                 } else {
-                    throw new Error(await response.text());
+                    const errorText = await response.text();
+                    console.error("Erro GitHub:", errorText);
+                    throw new Error(errorText);
                 }
             } catch(e) {
                 localStorage.setItem('femix_dashboard_data', JSON.stringify(data));
-                if (showMsg) showToast("⚠️ Salvando localmente (falha no GitHub). Verifique o console.", true);
+                if (showMsg) showToast(`⚠️ Salvando localmente (falha no GitHub): ${e.message}`, true);
                 return false;
             }
         }
@@ -629,7 +502,7 @@
                 let ocup = data.reservado + data.contrato;
                 let disponivel = Math.max(0, data.total - ocup);
                 let perc = Math.min(100, Math.round((ocup / data.total) * 100));
-                html += `<tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</td></tr>`;
+                html += `     <tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</td></tr>`;
             }
             document.getElementById("situacaoTableBody").innerHTML = html;
         }
@@ -686,24 +559,30 @@
             let filtered = getFilteredData();
             let tbody = document.getElementById("tableBody");
             if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado</td></tr>`; updateFilterTotals(); return; }
-            tbody.innerHTML = filtered.map((item, idx) => `
-                <tr data-idx="${idx}">
-                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td>
-                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td>
-                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td>
-                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td>
-                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td>
-                    <td>${isAdmin ? `<select class="status-select" data-idx="${idx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td>
-                    <td>${isAdmin ? `<button class="btn-edit" data-idx="${idx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-idx="${idx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = filtered.map((item, idx) => {
+                // Encontrar o índice original no salesData
+                const originalIdx = salesData.findIndex(d => d.empresa === item.empresa && d.local === item.local && d.quantidade === item.quantidade && d.valor === item.valor && d.segmento === item.segmento && d.situacao === item.situacao);
+                // Fallback: se não encontrar (por duplicatas), usa o índice no array filtrado (não recomendado, mas evita quebra)
+                const safeIdx = originalIdx !== -1 ? originalIdx : idx;
+                return `
+                    <tr data-original-idx="${safeIdx}">
+                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td>
+                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td>
+                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td>
+                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td>
+                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td>
+                        <td>${isAdmin ? `<select class="status-select" data-original-idx="${safeIdx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td>
+                        <td>${isAdmin ? `<button class="btn-edit" data-original-idx="${safeIdx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-original-idx="${safeIdx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td>
+                    </tr>
+                `;
+            }).join('');
             if (isAdmin) {
                 attachEditEvents();
                 attachDeleteEvents();
                 attachStatusEvents();
                 document.querySelectorAll('.btn-edit').forEach(btn => {
                     btn.removeEventListener('click', btn.editHandler);
-                    btn.editHandler = () => openEditModal(parseInt(btn.dataset.idx));
+                    btn.editHandler = () => openEditModal(parseInt(btn.dataset.originalIdx));
                     btn.addEventListener('click', btn.editHandler);
                 });
             }
@@ -719,11 +598,11 @@
                     e.stopPropagation();
                     const row = cell.closest('tr');
                     if (!row) return;
-                    const rowIdx = parseInt(row.dataset.idx);
-                    if (isNaN(rowIdx)) return;
+                    const originalIdx = parseInt(row.dataset.originalIdx);
+                    if (isNaN(originalIdx)) return;
                     const field = cell.dataset.field;
                     const cur = cell.dataset.value;
-                    makeEditable(cell, rowIdx, field, cur);
+                    makeEditable(cell, originalIdx, field, cur);
                 };
                 cell.addEventListener('click', cell.clickHandler);
             });
@@ -733,8 +612,8 @@
             document.querySelectorAll('.btn-delete').forEach(btn => {
                 btn.removeEventListener('click', btn.clickHandler);
                 btn.clickHandler = async () => {
-                    let idx = parseInt(btn.dataset.idx);
-                    salesData.splice(idx, 1);
+                    let originalIdx = parseInt(btn.dataset.originalIdx);
+                    salesData.splice(originalIdx, 1);
                     await saveToGitHub(salesData);
                     refreshAll();
                     showToast("Empresa removida!");
@@ -747,8 +626,8 @@
             document.querySelectorAll('.status-select').forEach(sel => {
                 sel.removeEventListener('change', sel.changeHandler);
                 sel.changeHandler = async () => {
-                    let idx = parseInt(sel.dataset.idx);
-                    salesData[idx].situacao = sel.value;
+                    let originalIdx = parseInt(sel.dataset.originalIdx);
+                    salesData[originalIdx].situacao = sel.value;
                     await saveToGitHub(salesData);
                     refreshAll();
                     showToast("Situação atualizada!");
@@ -757,7 +636,7 @@
             });
         }
 
-        function makeEditable(cell, rowIdx, field, cur) {
+        function makeEditable(cell, originalIdx, field, cur) {
             if (editMode) { showToast("Termine a edição atual primeiro", true); return; }
             editMode = true;
             const input = document.createElement('input');
@@ -771,7 +650,7 @@
                 let val = input.value;
                 if (field === 'valor') val = parseFloat(val) || 0;
                 if (field === 'quantidade') val = parseInt(val) || 1;
-                salesData[rowIdx][field] = val;
+                salesData[originalIdx][field] = val;
                 editMode = false;
                 await saveToGitHub(salesData);
                 refreshAll();
@@ -785,9 +664,9 @@
             input.addEventListener('keypress', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); });
         }
 
-        function openEditModal(idx) {
-            const empresa = salesData[idx];
-            currentEditIdx = idx;
+        function openEditModal(originalIdx) {
+            const empresa = salesData[originalIdx];
+            currentEditOriginalIdx = originalIdx;
             document.getElementById('editEmpresa').value = empresa.empresa;
             document.getElementById('editLocal').innerHTML = '';
             const locSelect = document.getElementById('editLocal');
@@ -827,11 +706,11 @@
 
         function closeEditModal() {
             document.getElementById('editModal').style.display = 'none';
-            currentEditIdx = null;
+            currentEditOriginalIdx = null;
         }
 
         async function saveEditModal() {
-            if (currentEditIdx === null) return;
+            if (currentEditOriginalIdx === null) return;
             const novaEmpresa = {
                 empresa: document.getElementById('editEmpresa').value,
                 local: document.getElementById('editLocal').value,
@@ -840,7 +719,7 @@
                 segmento: document.getElementById('editSegmento').value,
                 situacao: document.getElementById('editSituacao').value
             };
-            salesData[currentEditIdx] = novaEmpresa;
+            salesData[currentEditOriginalIdx] = novaEmpresa;
             closeEditModal();
             await saveToGitHub(salesData);
             refreshAll();
