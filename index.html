@@ -249,14 +249,14 @@
             <div class="admin-actions"><div class="mode-badge" id="modeBadge"><i class="fas fa-eye"></i> Modo Público</div><button class="admin-login-btn" id="openAdminBtn"><i class="fas fa-user-shield"></i> Área Administrativa</button></div>
         </div>
 
-        <div class="status-bar"><div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span id="modeStatus" class="badge badge-public">Visualização Pública</span></div><div><i class="fas fa-info-circle"></i> Dados salvos via GitHub/local</div></div>
+        <div class="status-bar"><div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span id="modeStatus" class="badge badge-public">Visualização Pública</span></div><div><i class="fas fa-info-circle"></i> Dados salvos na nuvem via GitHub API</div></div>
 
         <div class="action-buttons" id="actionButtons">
             <button class="btn btn-primary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
             <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
         </div>
 
-        <!-- Mapas oficiais (placeholders se imagens não existirem) -->
+        <!-- Mapas oficiais (placeholders) -->
         <div class="maps-gallery">
             <h3><i class="fas fa-map"></i> Plantas Oficiais</h3>
             <div class="maps-grid">
@@ -301,7 +301,7 @@
         </div>
 
         <!-- Tabela situação por local -->
-        <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody>      </table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
+        <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody>        </table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
 
         <!-- Tabela empresas editável com filtros e totais -->
         <div class="data-section">
@@ -339,7 +339,16 @@
     <div id="toastMessage" class="toast-message"></div>
 
     <script>
-        // ========== CAPACIDADES CORRETAS (total 171) ==========
+        // ========== CONFIGURAÇÕES DO GITHUB (JÁ PREENCHIDAS) ==========
+        const GITHUB_CONFIG = {
+            owner: "SEU_USUARIO_AQUI",   // ⚠️ SUBSTITUA PELO SEU USUÁRIO DO GITHUB
+            repo: "femix-dados",          // ⚠️ CRIE UM REPOSITÓRIO COM ESTE NOME
+            filePath: "femix_dados.json",
+            branch: "main"
+        };
+        let GITHUB_TOKEN = "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"; // token já inserido
+
+        // ========== CAPACIDADES ==========
         const locationCapacities = {
             "Tancredão - Ind e Com": 92,
             "Multiuso - Cdia Trend": 18,
@@ -391,8 +400,8 @@
             ["Marafim Móveis","Tancredão - Ind e Com",4,"Reservado",19776],["Eli Arte e Chimarrão","Tancredão - Ind e Com",1,"Reservado",4944]
         ];
 
-        // Ajustar local "Externo" para "Externo - Demais Espaços" (capacidade 7)
-        const fixedData = rawData.map(row => {
+        // Ajustar local "Externo" para "Externo - Demais Espaços"
+        const defaultData = rawData.map(row => {
             let local = row[1];
             if (local === "Externo") local = "Externo - Demais Espaços";
             return {
@@ -401,25 +410,93 @@
             };
         });
 
-        // Globais
-        let isAdmin = false, salesData = [], currentLocationFilter = null, currentSituationFilter = null, currentSearchTerm = "", editMode = false;
+        // ========== GLOBAIS ==========
+        let isAdmin = false;
+        let salesData = [];
+        let currentLocationFilter = null;
+        let currentSituationFilter = null;
+        let currentSearchTerm = "";
+        let editMode = false;
         let piePercentChart, gaugeChart;
-        let lastState = null;
         let currentEditIdx = null;
-        const GITHUB_CONFIG = { owner: "SEU_USUARIO_AQUI", repo: "femix-dados", filePath: "femix_dados.json", branch: "main" };
-        let GITHUB_TOKEN = "";
-        const ADMIN_USER = "sandra", ADMIN_PASS = "livia2011";
+        const ADMIN_USER = "sandra";
+        const ADMIN_PASS = "livia2011";
 
-        function showToast(msg, err=false){ let t=document.getElementById('toastMessage'); t.style.backgroundColor=err?'#E67E22':'#2E7A6E'; t.innerHTML=`<i class="fas ${err?'fa-exclamation-triangle':'fa-check-circle'}"></i> ${msg}`; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
-        async function saveToGitHub(data,showMsg=true){ if(!GITHUB_TOKEN||GITHUB_CONFIG.owner==="SEU_USUARIO_AQUI"){ localStorage.setItem('femix_dashboard_data',JSON.stringify(data)); if(showMsg) showToast("⚠️ Modo local",true); return false; } return true; }
-        async function loadFromGitHub(){ let saved=localStorage.getItem('femix_dashboard_data'); if(saved){ salesData=JSON.parse(saved); return true;} salesData=JSON.parse(JSON.stringify(fixedData)); return false; }
+        // ========== FUNÇÕES DE SALVAMENTO (GitHub + fallback localStorage) ==========
+        async function saveToGitHub(data, showMsg = true) {
+            if (!GITHUB_TOKEN || GITHUB_CONFIG.owner === "SEU_USUARIO_AQUI") {
+                localStorage.setItem('femix_dashboard_data', JSON.stringify(data));
+                if (showMsg) showToast("⚠️ Modo local (GitHub não configurado)", true);
+                return false;
+            }
+            try {
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+                let sha = null;
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.filePath}`, {
+                        headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+                    });
+                    if (res.ok) sha = (await res.json()).sha;
+                } catch(e) {}
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.filePath}`, {
+                    method: 'PUT',
+                    headers: { Authorization: `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Atualização ${new Date().toLocaleString()}`, content, sha, branch: GITHUB_CONFIG.branch })
+                });
+                if (response.ok) {
+                    if (showMsg) showToast("✅ Dados salvos no GitHub!");
+                    return true;
+                }
+                throw new Error();
+            } catch(e) {
+                localStorage.setItem('femix_dashboard_data', JSON.stringify(data));
+                if (showMsg) showToast("⚠️ Salvando localmente (falha no GitHub)", true);
+                return false;
+            }
+        }
 
-        function getFilteredData(){
-            return salesData.filter(i=>{
-                if(currentLocationFilter && i.local !== currentLocationFilter) return false;
-                if(currentSituationFilter && i.situacao !== currentSituationFilter) return false;
-                if(currentSearchTerm){
-                    let t = currentSearchTerm.toLowerCase();
+        async function loadFromGitHub() {
+            if (!GITHUB_TOKEN || GITHUB_CONFIG.owner === "SEU_USUARIO_AQUI") {
+                const saved = localStorage.getItem('femix_dashboard_data');
+                if (saved) { salesData = JSON.parse(saved); return true; }
+                salesData = JSON.parse(JSON.stringify(defaultData));
+                return false;
+            }
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.filePath}`, {
+                    headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+                });
+                if (res.status === 200) {
+                    const data = await res.json();
+                    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                    salesData = content;
+                    return true;
+                }
+            } catch(e) {}
+            salesData = JSON.parse(JSON.stringify(defaultData));
+            return false;
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('femix_dashboard_data', JSON.stringify(salesData));
+            showToast("✅ Dados salvos localmente", false);
+        }
+
+        function showToast(msg, isErr=false) {
+            const toast = document.getElementById('toastMessage');
+            toast.style.backgroundColor = isErr ? '#E67E22' : '#2E7A6E';
+            toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        // ========== FUNÇÕES DE FILTRO E UI ==========
+        function getFilteredData() {
+            return salesData.filter(i => {
+                if (currentLocationFilter && i.local !== currentLocationFilter) return false;
+                if (currentSituationFilter && i.situacao !== currentSituationFilter) return false;
+                if (currentSearchTerm) {
+                    const t = currentSearchTerm.toLowerCase();
                     return i.empresa.toLowerCase().includes(t) || i.local.toLowerCase().includes(t) || i.segmento.toLowerCase().includes(t);
                 }
                 return true;
@@ -433,10 +510,7 @@
             document.getElementById('filterTotals').innerHTML = `<span>Total de estandes: ${totalQuant}</span><span>Valor total: R$ ${totalValor.toLocaleString('pt-BR')}</span>`;
         }
 
-        function saveState() { lastState = JSON.parse(JSON.stringify(salesData)); }
-        function undo() { if (!lastState) { showToast("Nada para desfazer", true); return; } salesData = JSON.parse(JSON.stringify(lastState)); lastState = null; saveToGitHub(salesData, false); refreshAll(); showToast("Última alteração desfeita!"); }
-
-        function updateKPIs(){
+        function updateKPIs() {
             const totalRev = salesData.reduce((s,i)=>s+i.valor,0);
             const totalEmpresas = salesData.length;
             const ticketMedio = totalEmpresas ? totalRev / totalEmpresas : 0;
@@ -451,94 +525,138 @@
             return ocupPercent;
         }
 
-        function renderMap(){
-            let stats={}; for(let l in locationCapacities) stats[l]={total:locationCapacities[l], reservado:0, contrato:0, receita:0};
-            salesData.forEach(i=>{ let q=i.quantidade||1; if(i.situacao==="Reservado") stats[i.local].reservado+=q; else if(i.situacao==="Contrato Assinado") stats[i.local].contrato+=q; stats[i.local].receita+=i.valor; });
-            let grid=document.getElementById("mapGrid"); grid.innerHTML="";
-            for(let [local,data] of Object.entries(stats)){
-                let ocupReal = data.reservado+data.contrato;
+        function renderMap() {
+            let stats = {};
+            for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0, receita: 0 };
+            salesData.forEach(i => {
+                let q = i.quantidade || 1;
+                if (i.situacao === "Reservado") stats[i.local].reservado += q;
+                else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
+                stats[i.local].receita += i.valor;
+            });
+            let grid = document.getElementById("mapGrid");
+            grid.innerHTML = "";
+            for (let [local, data] of Object.entries(stats)) {
+                let ocupReal = data.reservado + data.contrato;
                 let perc = Math.min(100, (ocupReal / data.total) * 100);
                 let hasExcess = ocupReal > data.total;
-                let iconMap={"Tancredão - Ind e Com":"fa-industry","Multiuso - Cdia Trend":"fa-store","Externo - Motos":"fa-motorcycle","Externo - Semi Novos":"fa-car","Externo - Concessionárias":"fa-car-side","Externo - Agropet":"fa-paw","Externo - Parque de Diversões":"fa-tree","Externo - Caminhões":"fa-truck","Externo - Espaços Privilegiados":"fa-crown","Externo - Alimentação":"fa-utensils","Externo - Demais Espaços":"fa-store","Espaço Conceito":"fa-star","Externo - Churrasqueiras":"fa-fire","Restaurante":"fa-utensil-spoon"};
-                let card=document.createElement("div"); card.className=`map-location ${currentLocationFilter===local?'selected':''}`;
-                card.onclick=()=>{ 
-                    if(local==="Multiuso - Cdia Trend"){ 
-                        document.getElementById("standsOverlay").style.display="flex"; 
-                        renderStands(); 
+                let iconMap = {
+                    "Tancredão - Ind e Com": "fa-industry", "Multiuso - Cdia Trend": "fa-store",
+                    "Externo - Motos": "fa-motorcycle", "Externo - Semi Novos": "fa-car",
+                    "Externo - Concessionárias": "fa-car-side", "Externo - Agropet": "fa-paw",
+                    "Externo - Parque de Diversões": "fa-tree", "Externo - Caminhões": "fa-truck",
+                    "Externo - Espaços Privilegiados": "fa-crown", "Externo - Alimentação": "fa-utensils",
+                    "Externo - Demais Espaços": "fa-store", "Espaço Conceito": "fa-star",
+                    "Externo - Churrasqueiras": "fa-fire", "Restaurante": "fa-utensil-spoon"
+                };
+                let card = document.createElement("div");
+                card.className = `map-location ${currentLocationFilter === local ? 'selected' : ''}`;
+                card.onclick = () => {
+                    if (local === "Multiuso - Cdia Trend") {
+                        document.getElementById("standsOverlay").style.display = "flex";
+                        renderStands();
                     } else {
-                        currentLocationFilter = currentLocationFilter===local ? null : local;
+                        currentLocationFilter = currentLocationFilter === local ? null : local;
                         const locSelect = document.getElementById('locationFilter');
-                        if(locSelect) locSelect.value = currentLocationFilter || '';
-                        renderMap(); 
-                        renderTable(); 
+                        if (locSelect) locSelect.value = currentLocationFilter || '';
+                        renderMap();
+                        renderTable();
                         updateFilterTotals();
                     }
                 };
                 let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes além da capacidade">⚠️</span>` : '';
-                card.innerHTML=`<div class="location-header"><div class="location-name"><i class="fas ${iconMap[local]||'fa-map-marker'}"></i> ${local} ${warning}</div><div class="location-icon"><i class="fas ${iconMap[local]||'fa-map-marker'}"></i></div></div>
-                                <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita/1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div>
-                                <div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div>
-                                <div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${Math.max(0,data.total-ocupReal)}</span></div>`;
+                card.innerHTML = `
+                    <div class="location-header">
+                        <div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div>
+                        <div class="location-icon"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i></div>
+                    </div>
+                    <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;">
+                        <span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span>
+                        <span>🏢 ${ocupReal}/${data.total}</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div>
+                    <div class="status-badges">
+                        <span class="badge-reservado">Reservados: ${data.reservado}</span>
+                        <span class="badge-contrato">Contrato: ${data.contrato}</span>
+                        <span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span>
+                    </div>
+                `;
                 grid.appendChild(card);
             }
         }
 
-        function renderStands(){
-            let grid=document.getElementById("standsGrid"); let stands=salesData.filter(d=>d.local==="Multiuso - Cdia Trend"); grid.innerHTML=""; if(!stands.length){ grid.innerHTML="<p>Nenhum stand cadastrado.</p>"; return; }
-            stands.forEach(s=>{ let bc=s.situacao==="Contrato Assinado"?"#2E7A6E":(s.situacao==="Reservado"?"#FFC107":"#aaa"); let card=document.createElement("div"); card.style.borderLeft=`4px solid ${bc}`; card.style.padding="0.5rem"; card.style.margin="0.5rem 0"; card.style.background="#faf7f2"; card.style.borderRadius="12px"; card.style.cursor="pointer"; card.onclick=()=>{ if(!isAdmin){ showToast("Faça login para editar",true); return; } let nova=prompt("Alterar situação:\n1-Disponível\n2-Reservado\n3-Contrato Assinado",s.situacao==="Reservado"?"2":(s.situacao==="Contrato Assinado"?"3":"1")); if(nova&&["1","2","3"].includes(nova)){ saveState(); let map={1:"Disponível",2:"Reservado",3:"Contrato Assinado"}; s.situacao=map[nova]; saveToGitHub(salesData); renderStands(); refreshAll(); } }; card.innerHTML=`<strong>${s.empresa}</strong> (${s.quantidade} est.)<br><span style="color:${bc}">${s.situacao}</span>`; grid.appendChild(card); });
+        function renderStands() {
+            let grid = document.getElementById("standsGrid");
+            let stands = salesData.filter(d => d.local === "Multiuso - Cdia Trend");
+            grid.innerHTML = "";
+            if (!stands.length) {
+                grid.innerHTML = "<p>Nenhum stand cadastrado.</p>";
+                return;
+            }
+            stands.forEach(s => {
+                let bc = s.situacao === "Contrato Assinado" ? "#2E7A6E" : (s.situacao === "Reservado" ? "#FFC107" : "#aaa");
+                let card = document.createElement("div");
+                card.style.borderLeft = `4px solid ${bc}`;
+                card.style.padding = "0.5rem";
+                card.style.margin = "0.5rem 0";
+                card.style.background = "#faf7f2";
+                card.style.borderRadius = "12px";
+                card.style.cursor = "pointer";
+                card.onclick = () => {
+                    if (!isAdmin) { showToast("Faça login para editar", true); return; }
+                    let nova = prompt("Alterar situação:\n1-Disponível\n2-Reservado\n3-Contrato Assinado", s.situacao === "Reservado" ? "2" : (s.situacao === "Contrato Assinado" ? "3" : "1"));
+                    if (nova && ["1","2","3"].includes(nova)) {
+                        let map = {1:"Disponível",2:"Reservado",3:"Contrato Assinado"};
+                        s.situacao = map[nova];
+                        saveToGitHub(salesData);
+                        renderStands();
+                        refreshAll();
+                    }
+                };
+                card.innerHTML = `<strong>${s.empresa}</strong> (${s.quantidade} est.)<br><span style="color:${bc}">${s.situacao}</span>`;
+                grid.appendChild(card);
+            });
         }
 
-        function renderSituacaoTable(){
-            let stats={}; for(let l in locationCapacities) stats[l]={total:locationCapacities[l], reservado:0, contrato:0};
-            salesData.forEach(i=>{ let q=i.quantidade||1; if(i.situacao==="Reservado") stats[i.local].reservado+=q; else if(i.situacao==="Contrato Assinado") stats[i.local].contrato+=q; });
-            let html="";
-            for(let [local,data] of Object.entries(stats)){
-                let ocup = data.reservado+data.contrato;
+        function renderSituacaoTable() {
+            let stats = {};
+            for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0 };
+            salesData.forEach(i => {
+                let q = i.quantidade || 1;
+                if (i.situacao === "Reservado") stats[i.local].reservado += q;
+                else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
+            });
+            let html = "";
+            for (let [local, data] of Object.entries(stats)) {
+                let ocup = data.reservado + data.contrato;
                 let disponivel = Math.max(0, data.total - ocup);
                 let perc = Math.min(100, Math.round((ocup / data.total) * 100));
-                html+=`<tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</td></tr>`;
+                html += `<tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</td></tr>`;
             }
-            document.getElementById("situacaoTableBody").innerHTML=html;
+            document.getElementById("situacaoTableBody").innerHTML = html;
         }
 
-        function updatePieChart(){
+        function updatePieChart() {
             let reservado = 0, contrato = 0;
-            salesData.forEach(i=>{ let q=i.quantidade||1; if(i.situacao==="Reservado") reservado+=q; else if(i.situacao==="Contrato Assinado") contrato+=q; });
+            salesData.forEach(i => { let q = i.quantidade || 1; if (i.situacao === "Reservado") reservado += q; else if (i.situacao === "Contrato Assinado") contrato += q; });
             let totalOcup = reservado + contrato;
             let disponivel = Math.max(0, totalCapacidade - totalOcup);
             let valoresAbsolutos = [disponivel, reservado, contrato];
             let labels = ["Disponível", "Reservado", "Contrato Assinado"];
             let cores = ["#aaa", "#FFC107", "#2E7A6E"];
-
             let total = valoresAbsolutos.reduce((a,b)=>a+b,0);
-            if(piePercentChart){
+            if (piePercentChart) {
                 piePercentChart.data.datasets[0].data = valoresAbsolutos;
                 piePercentChart.update();
             } else {
                 const ctxPie = document.getElementById('piePercentChart').getContext('2d');
                 piePercentChart = new Chart(ctxPie, {
                     type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: valoresAbsolutos,
-                            backgroundColor: cores,
-                            borderWidth: 0
-                        }]
-                    },
+                    data: { labels: labels, datasets: [{ data: valoresAbsolutos, backgroundColor: cores, borderWidth: 0 }] },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: true,
                         plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: ctx => {
-                                        let val = ctx.raw;
-                                        let pct = ((val / total) * 100).toFixed(1);
-                                        return `${ctx.label}: ${val} estandes (${pct}%)`;
-                                    }
-                                }
-                            },
+                            tooltip: { callbacks: { label: ctx => { let val = ctx.raw; let pct = ((val / total) * 100).toFixed(1); return `${ctx.label}: ${val} estandes (${pct}%)`; } } },
                             legend: { display: false }
                         }
                     }
@@ -546,86 +664,266 @@
             }
             let legendDiv = document.getElementById('piePercentLegend');
             legendDiv.innerHTML = "";
-            for(let i=0;i<labels.length;i++){
+            for (let i = 0; i < labels.length; i++) {
                 let pct = total ? ((valoresAbsolutos[i] / total) * 100).toFixed(1) : 0;
                 legendDiv.innerHTML += `<span style="display:inline-block; margin:0 8px;"><span style="background:${cores[i]}; width:12px; height:12px; display:inline-block; border-radius:2px;"></span> ${labels[i]}: ${valoresAbsolutos[i]} (${pct}%)</span>`;
             }
         }
 
-        function updateGauge(occupancyPercent){
+        function updateGauge(occupancyPercent) {
             const ctx = document.getElementById('gaugeChart').getContext('2d');
             const value = Math.min(100, occupancyPercent);
             const remainder = 100 - value;
             if (gaugeChart) gaugeChart.destroy();
             gaugeChart = new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [value, remainder],
-                        backgroundColor: ['#2E7A6E', '#e0d5c8'],
-                        borderWidth: 0,
-                        circumference: 180,
-                        rotation: 270,
-                        cutout: '70%'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { tooltip: { enabled: false }, legend: { display: false } }
-                }
+                data: { datasets: [{ data: [value, remainder], backgroundColor: ['#2E7A6E', '#e0d5c8'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '70%' }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { enabled: false }, legend: { display: false } } }
             });
             document.getElementById('gaugeLabel').innerText = `${Math.round(value)}% de ocupação total`;
             document.getElementById('gaugeCenterLabel').innerText = `${Math.round(value)}%`;
         }
 
-        function renderTable(){
+        function renderTable() {
             let filtered = getFilteredData();
             let tbody = document.getElementById("tableBody");
-            if(!filtered.length){ tbody.innerHTML=`<td colspan="7">Nenhum resultado</td>`; updateFilterTotals(); return; }
-            tbody.innerHTML = filtered.map((item,idx)=>`<tr data-idx="${idx}">
-                <td class="${isAdmin?'editable-cell':'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td>
-                <td class="${isAdmin?'editable-cell':'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td>
-                <td class="${isAdmin?'editable-cell':'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td>
-                <td class="${isAdmin?'editable-cell':'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td>
-                <td class="${isAdmin?'editable-cell':'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td>
-                <td>${isAdmin?`<select class="status-select" data-idx="${idx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>`:`<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td>
-                <td>${isAdmin?`<button class="btn-edit" data-idx="${idx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-idx="${idx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>`:''}</td>
-            </tr>`).join('');
-            if(isAdmin){
-                attachEditEvents(); attachDeleteEvents(); attachStatusEvents();
-                document.querySelectorAll('.btn-edit').forEach(btn=>{ btn.removeEventListener('click', btn.editHandler); btn.editHandler = ()=>openEditModal(parseInt(btn.dataset.idx)); btn.addEventListener('click', btn.editHandler); });
+            if (!filtered.length) { tbody.innerHTML = `<td colspan="7">Nenhum resultado</td>`; updateFilterTotals(); return; }
+            tbody.innerHTML = filtered.map((item, idx) => `
+                <tr data-idx="${idx}">
+                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td>
+                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td>
+                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td>
+                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td>
+                    <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td>
+                    <td>${isAdmin ? `<select class="status-select" data-idx="${idx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td>
+                    <td>${isAdmin ? `<button class="btn-edit" data-idx="${idx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-idx="${idx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td>
+                </tr>
+            `).join('');
+            if (isAdmin) {
+                attachEditEvents();
+                attachDeleteEvents();
+                attachStatusEvents();
+                document.querySelectorAll('.btn-edit').forEach(btn => {
+                    btn.removeEventListener('click', btn.editHandler);
+                    btn.editHandler = () => openEditModal(parseInt(btn.dataset.idx));
+                    btn.addEventListener('click', btn.editHandler);
+                });
             }
             updateFilterTotals();
         }
-        function escapeHtml(str){ return String(str).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
-        function attachEditEvents(){ document.querySelectorAll('.editable-cell').forEach(cell=>{ cell.removeEventListener('click',cell.clickHandler); cell.clickHandler=e=>{ e.stopPropagation(); const row=cell.closest('tr'); if(!row) return; const rowIdx=parseInt(row.dataset.idx); if(isNaN(rowIdx)) return; const field=cell.dataset.field; const cur=cell.dataset.value; makeEditable(cell,rowIdx,field,cur); }; cell.addEventListener('click',cell.clickHandler); }); }
-        function attachDeleteEvents(){ document.querySelectorAll('.btn-delete').forEach(btn=>{ btn.removeEventListener('click',btn.clickHandler); btn.clickHandler=async()=>{ let idx=parseInt(btn.dataset.idx); saveState(); salesData.splice(idx,1); await saveToGitHub(salesData); refreshAll(); showToast("Empresa removida!"); }; btn.addEventListener('click',btn.clickHandler); }); }
-        function attachStatusEvents(){ document.querySelectorAll('.status-select').forEach(sel=>{ sel.removeEventListener('change',sel.changeHandler); sel.changeHandler=async()=>{ let idx=parseInt(sel.dataset.idx); saveState(); salesData[idx].situacao=sel.value; await saveToGitHub(salesData); refreshAll(); showToast("Situação atualizada!"); }; sel.addEventListener('change',sel.changeHandler); }); }
-        function makeEditable(cell,rowIdx,field,cur){ if(editMode){ showToast("Termine a edição atual primeiro"); return; } editMode=true; const input=document.createElement('input'); input.type=(field==='valor'||field==='quantidade')?'number':'text'; input.value=cur; input.className='edit-input'; cell.innerHTML=''; cell.appendChild(input); input.focus(); const save=async()=>{ let val=input.value; if(field==='valor') val=parseFloat(val)||0; if(field==='quantidade') val=parseInt(val)||1; saveState(); salesData[rowIdx][field]=val; editMode=false; await saveToGitHub(salesData); refreshAll(); showToast("Dados atualizados!"); }; const cancel=()=>{ editMode=false; refreshAll(); }; input.addEventListener('blur',save); input.addEventListener('keypress',e=>{if(e.key==='Enter')save();if(e.key==='Escape')cancel();}); }
-        function openEditModal(idx){ const empresa=salesData[idx]; currentEditIdx=idx; document.getElementById('editEmpresa').value=empresa.empresa; document.getElementById('editLocal').value=empresa.local; document.getElementById('editQuantidade').value=empresa.quantidade; document.getElementById('editValor').value=empresa.valor; document.getElementById('editSegmento').value=empresa.segmento; document.getElementById('editSituacao').value=empresa.situacao; document.getElementById('editModal').style.display='flex'; }
-        function closeEditModal(){ document.getElementById('editModal').style.display='none'; currentEditIdx=null; }
-        async function saveEditModal(){ if(currentEditIdx===null) return; const novaEmpresa={ empresa:document.getElementById('editEmpresa').value, local:document.getElementById('editLocal').value, quantidade:parseInt(document.getElementById('editQuantidade').value)||1, valor:parseFloat(document.getElementById('editValor').value)||0, segmento:document.getElementById('editSegmento').value, situacao:document.getElementById('editSituacao').value }; saveState(); salesData[currentEditIdx]=novaEmpresa; await saveToGitHub(salesData); closeEditModal(); refreshAll(); showToast("Empresa atualizada!"); }
-        function refreshAll(){ if(editMode) return; const ocupPercent = updateKPIs(); renderMap(); renderSituacaoTable(); renderTable(); updatePieChart(); updateGauge(ocupPercent); }
 
-        async function exportToPDF(){ showToast("Gerando PDF..."); let el=document.getElementById("dashboardToExport"); try{ let canvas=await html2canvas(el,{scale:2,useCORS:true}); let imgData=canvas.toDataURL('image/png'); let {jsPDF}=window.jspdf; let pdf=new jsPDF('p','mm','a4'); let imgWidth=210; let imgHeight=(canvas.height*imgWidth)/canvas.width; let heightLeft=imgHeight; let pos=0; pdf.addImage(imgData,'PNG',0,pos,imgWidth,imgHeight); heightLeft-=297; while(heightLeft>0){ pos=heightLeft-imgHeight; pdf.addPage(); pdf.addImage(imgData,'PNG',0,pos,imgWidth,imgHeight); heightLeft-=297; } pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`); showToast("PDF gerado!"); }catch(e){ showToast("Erro ao gerar PDF",true); } }
-        function exportToExcel(){ let wsData=[["Empresa","Local","Quantidade","Valor Total (R$)","Segmento","Situação"]]; salesData.forEach(i=>wsData.push([i.empresa,i.local,i.quantidade,i.valor,i.segmento,i.situacao])); let ws=XLSX.utils.aoa_to_sheet(wsData); let wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"FEMIX_Vendas"); XLSX.writeFile(wb,`FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`); showToast("Exportado Excel!"); }
-        async function addSampleCompany(){ if(editMode){ showToast("Termine a edição atual primeiro",true); return; } saveState(); const nova={ empresa:`Nova Empresa ${salesData.length+1}`, local:"Externo - Demais Espaços", quantidade:1, situacao:"Disponível", valor:5000, segmento:"Diversos" }; salesData.push(nova); await saveToGitHub(salesData); editMode=false; refreshAll(); setTimeout(()=>{ const lastRow=document.querySelector("#tableBody tr:last-child"); if(lastRow) lastRow.scrollIntoView({behavior:"smooth",block:"nearest"}); },100); showToast("Empresa adicionada!"); }
-        async function resetData(){ if(confirm("Resetar dados?")){ saveState(); salesData=JSON.parse(JSON.stringify(fixedData)); await saveToGitHub(salesData); refreshAll(); showToast("Dados resetados!"); } }
-        function openAdminModal(){ document.getElementById('adminModal').classList.add('active'); }
-        function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); }
-        function doAdminLogin(){ let user=document.getElementById('adminUser').value.trim().toLowerCase(); let pass=document.getElementById('adminPass').value; if(user===ADMIN_USER && pass===ADMIN_PASS){ isAdmin=true; sessionStorage.setItem('femix_admin','true'); closeAdminModal(); document.getElementById('modeBadge').innerHTML='<i class="fas fa-user-shield"></i> Modo Administrador'; document.getElementById('modeStatus').innerHTML='Administradora - Edição Liberada'; document.getElementById('editHint').innerHTML='<i class="fas fa-edit"></i> Clique para editar'; document.getElementById('actionsHeader').innerHTML='Ações'; document.getElementById('actionButtons').innerHTML=`<button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button><button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button><button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button><button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button><button class="btn btn-info" id="undoBtn"><i class="fas fa-undo-alt"></i> Desfazer</button>`; 
-                document.getElementById('addSampleBtn')?.addEventListener('click',addSampleCompany); 
-                document.getElementById('saveNowBtn')?.addEventListener('click',()=>saveToGitHub(salesData,true)); 
-                document.getElementById('resetDataBtn')?.addEventListener('click',resetData); 
-                document.getElementById('exportExcelBtn')?.addEventListener('click',exportToExcel); 
-                document.getElementById('exportPdfBtn')?.addEventListener('click',exportToPDF); 
-                document.getElementById('undoBtn')?.addEventListener('click',undo); 
-            } 
-            refreshAll(); 
+        function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+        function attachEditEvents() {
+            document.querySelectorAll('.editable-cell').forEach(cell => {
+                cell.removeEventListener('click', cell.clickHandler);
+                cell.clickHandler = e => {
+                    e.stopPropagation();
+                    const row = cell.closest('tr');
+                    if (!row) return;
+                    const rowIdx = parseInt(row.dataset.idx);
+                    if (isNaN(rowIdx)) return;
+                    const field = cell.dataset.field;
+                    const cur = cell.dataset.value;
+                    makeEditable(cell, rowIdx, field, cur);
+                };
+                cell.addEventListener('click', cell.clickHandler);
+            });
         }
 
-        // Preencher dropdowns de locais e situação
+        function attachDeleteEvents() {
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.removeEventListener('click', btn.clickHandler);
+                btn.clickHandler = async () => {
+                    let idx = parseInt(btn.dataset.idx);
+                    salesData.splice(idx, 1);
+                    await saveToGitHub(salesData);
+                    refreshAll();
+                    showToast("Empresa removida!");
+                };
+                btn.addEventListener('click', btn.clickHandler);
+            });
+        }
+
+        function attachStatusEvents() {
+            document.querySelectorAll('.status-select').forEach(sel => {
+                sel.removeEventListener('change', sel.changeHandler);
+                sel.changeHandler = async () => {
+                    let idx = parseInt(sel.dataset.idx);
+                    salesData[idx].situacao = sel.value;
+                    await saveToGitHub(salesData);
+                    refreshAll();
+                    showToast("Situação atualizada!");
+                };
+                sel.addEventListener('change', sel.changeHandler);
+            });
+        }
+
+        function makeEditable(cell, rowIdx, field, cur) {
+            if (editMode) { showToast("Termine a edição atual primeiro", true); return; }
+            editMode = true;
+            const input = document.createElement('input');
+            input.type = (field === 'valor' || field === 'quantidade') ? 'number' : 'text';
+            input.value = cur;
+            input.className = 'edit-input';
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            input.focus();
+            const save = async () => {
+                let val = input.value;
+                if (field === 'valor') val = parseFloat(val) || 0;
+                if (field === 'quantidade') val = parseInt(val) || 1;
+                salesData[rowIdx][field] = val;
+                editMode = false;
+                await saveToGitHub(salesData);
+                refreshAll();
+                showToast("Dados atualizados!");
+            };
+            const cancel = () => {
+                editMode = false;
+                refreshAll();
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); });
+        }
+
+        function openEditModal(idx) {
+            const empresa = salesData[idx];
+            currentEditIdx = idx;
+            document.getElementById('editEmpresa').value = empresa.empresa;
+            document.getElementById('editLocal').value = empresa.local;
+            document.getElementById('editQuantidade').value = empresa.quantidade;
+            document.getElementById('editValor').value = empresa.valor;
+            document.getElementById('editSegmento').value = empresa.segmento;
+            document.getElementById('editSituacao').value = empresa.situacao;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditIdx = null;
+        }
+
+        async function saveEditModal() {
+            if (currentEditIdx === null) return;
+            const novaEmpresa = {
+                empresa: document.getElementById('editEmpresa').value,
+                local: document.getElementById('editLocal').value,
+                quantidade: parseInt(document.getElementById('editQuantidade').value) || 1,
+                valor: parseFloat(document.getElementById('editValor').value) || 0,
+                segmento: document.getElementById('editSegmento').value,
+                situacao: document.getElementById('editSituacao').value
+            };
+            salesData[currentEditIdx] = novaEmpresa;
+            closeEditModal();
+            await saveToGitHub(salesData);
+            refreshAll();
+            showToast("Empresa atualizada!");
+        }
+
+        function refreshAll() {
+            if (editMode) return;
+            const ocupPercent = updateKPIs();
+            renderMap();
+            renderSituacaoTable();
+            renderTable();
+            updatePieChart();
+            updateGauge(ocupPercent);
+        }
+
+        async function exportToPDF() {
+            showToast("Gerando PDF...");
+            let el = document.getElementById("dashboardToExport");
+            try {
+                let canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
+                let imgData = canvas.toDataURL('image/png');
+                let { jsPDF } = window.jspdf;
+                let pdf = new jsPDF('p', 'mm', 'a4');
+                let imgWidth = 210;
+                let imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= 297;
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= 297;
+                }
+                pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`);
+                showToast("PDF gerado!");
+            } catch (e) { showToast("Erro ao gerar PDF", true); }
+        }
+
+        function exportToExcel() {
+            let wsData = [["Empresa", "Local", "Quantidade", "Valor Total (R$)", "Segmento", "Situação"]];
+            salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao]));
+            let ws = XLSX.utils.aoa_to_sheet(wsData);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas");
+            XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`);
+            showToast("Exportado Excel!");
+        }
+
+        async function addSampleCompany() {
+            if (editMode) { showToast("Termine a edição atual primeiro", true); return; }
+            const nova = {
+                empresa: `Nova Empresa ${salesData.length+1}`,
+                local: "Externo - Demais Espaços",
+                quantidade: 1,
+                situacao: "Disponível",
+                valor: 5000,
+                segmento: "Diversos"
+            };
+            salesData.push(nova);
+            await saveToGitHub(salesData);
+            refreshAll();
+            showToast("Empresa adicionada!");
+        }
+
+        async function resetData() {
+            if (confirm("Resetar dados?")) {
+                salesData = JSON.parse(JSON.stringify(defaultData));
+                await saveToGitHub(salesData);
+                refreshAll();
+                showToast("Dados resetados!");
+            }
+        }
+
+        function openAdminModal() { document.getElementById('adminModal').classList.add('active'); }
+        function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
+        function doAdminLogin() {
+            const user = document.getElementById('adminUser').value.trim().toLowerCase();
+            const pass = document.getElementById('adminPass').value;
+            if (user === ADMIN_USER && pass === ADMIN_PASS) {
+                isAdmin = true;
+                sessionStorage.setItem('femix_admin', 'true');
+                closeAdminModal();
+                document.getElementById('modeBadge').innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador';
+                document.getElementById('modeStatus').innerHTML = 'Administradora - Edição Liberada';
+                document.getElementById('editHint').innerHTML = '<i class="fas fa-edit"></i> Clique para editar';
+                document.getElementById('actionsHeader').innerHTML = 'Ações';
+                document.getElementById('actionButtons').innerHTML = `
+                    <button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button>
+                    <button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+                    <button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button>
+                    <button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button>
+                `;
+                document.getElementById('addSampleBtn')?.addEventListener('click', addSampleCompany);
+                document.getElementById('saveNowBtn')?.addEventListener('click', () => saveToGitHub(salesData, true));
+                document.getElementById('resetDataBtn')?.addEventListener('click', resetData);
+                document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
+                document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF);
+                refreshAll();
+                showToast("Modo administrador ativado!");
+            } else {
+                document.getElementById('adminLoginError').style.display = 'block';
+                setTimeout(() => document.getElementById('adminLoginError').style.display = 'none', 3000);
+            }
+        }
+
         function populateFilters() {
             const locSelect = document.getElementById('locationFilter');
             locSelect.innerHTML = '<option value="">Todos os locais</option>';
@@ -650,32 +948,38 @@
             });
         }
 
-        document.getElementById('openAdminBtn').addEventListener('click',openAdminModal);
-        document.getElementById('closeModalBtn').addEventListener('click',closeAdminModal);
-        document.getElementById('confirmLoginBtn').addEventListener('click',doAdminLogin);
-        document.getElementById('closeStandsBtn').addEventListener('click',()=>document.getElementById('standsOverlay').style.display='none');
-        document.getElementById('searchInput').addEventListener('input',e=>{ currentSearchTerm=e.target.value; renderTable(); });
-        document.getElementById('saveEditBtn').addEventListener('click',saveEditModal);
-        document.getElementById('cancelEditBtn').addEventListener('click',closeEditModal);
+        document.getElementById('openAdminBtn').addEventListener('click', openAdminModal);
+        document.getElementById('closeModalBtn').addEventListener('click', closeAdminModal);
+        document.getElementById('confirmLoginBtn').addEventListener('click', doAdminLogin);
+        document.getElementById('closeStandsBtn').addEventListener('click', () => document.getElementById('standsOverlay').style.display = 'none');
+        document.getElementById('searchInput').addEventListener('input', e => { currentSearchTerm = e.target.value; renderTable(); });
+        document.getElementById('saveEditBtn').addEventListener('click', saveEditModal);
+        document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
 
-        (async()=>{ 
-            await loadFromGitHub(); 
+        // Inicialização
+        (async () => {
+            await loadFromGitHub();
             populateFilters();
-            if(sessionStorage.getItem('femix_admin')==='true'){ 
-                isAdmin=true; 
-                document.getElementById('modeBadge').innerHTML='<i class="fas fa-user-shield"></i> Modo Administrador'; 
-                document.getElementById('modeStatus').innerHTML='Administradora - Edição Liberada'; 
-                document.getElementById('editHint').innerHTML='<i class="fas fa-edit"></i> Clique para editar'; 
-                document.getElementById('actionsHeader').innerHTML='Ações'; 
-                document.getElementById('actionButtons').innerHTML=`<button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button><button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button><button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button><button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button><button class="btn btn-info" id="undoBtn"><i class="fas fa-undo-alt"></i> Desfazer</button>`; 
-                document.getElementById('addSampleBtn')?.addEventListener('click',addSampleCompany); 
-                document.getElementById('saveNowBtn')?.addEventListener('click',()=>saveToGitHub(salesData,true)); 
-                document.getElementById('resetDataBtn')?.addEventListener('click',resetData); 
-                document.getElementById('exportExcelBtn')?.addEventListener('click',exportToExcel); 
-                document.getElementById('exportPdfBtn')?.addEventListener('click',exportToPDF); 
-                document.getElementById('undoBtn')?.addEventListener('click',undo); 
-            } 
-            refreshAll(); 
+            if (sessionStorage.getItem('femix_admin') === 'true') {
+                isAdmin = true;
+                document.getElementById('modeBadge').innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador';
+                document.getElementById('modeStatus').innerHTML = 'Administradora - Edição Liberada';
+                document.getElementById('editHint').innerHTML = '<i class="fas fa-edit"></i> Clique para editar';
+                document.getElementById('actionsHeader').innerHTML = 'Ações';
+                document.getElementById('actionButtons').innerHTML = `
+                    <button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button>
+                    <button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+                    <button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button>
+                    <button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button>
+                `;
+                document.getElementById('addSampleBtn')?.addEventListener('click', addSampleCompany);
+                document.getElementById('saveNowBtn')?.addEventListener('click', () => saveToGitHub(salesData, true));
+                document.getElementById('resetDataBtn')?.addEventListener('click', resetData);
+                document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
+                document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF);
+            }
+            refreshAll();
         })();
     </script>
 </body>
