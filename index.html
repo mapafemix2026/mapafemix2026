@@ -2,464 +2,611 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEMIX 2026 | Dashboard Automático</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FEMIX 2026 | Gestão de Espaços · Painel Vivo</title>
+    <!-- Chart.js CDN + Papaparse para CSV robusto -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f0ece6; font-family: 'Inter', sans-serif; color: #1e2a2f; padding: 1.5rem; }
-        .dashboard-container { max-width: 1600px; margin: 0 auto; }
-        .femix-header { background: linear-gradient(135deg, #0B2B40, #1A4A5F); border-radius: 28px; padding: 1rem 2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-simbolo { background: #FFC107; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #0B2B40; }
-        .logo-texto h2 { color: white; font-size: 1.6rem; }
-        .logo-texto p { color: #FFE6B0; font-size: 0.7rem; }
-        .mode-badge { background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 40px; color: #FFE0A3; font-size: 0.8rem; }
-        .status-bar { background: white; border-radius: 16px; padding: 0.8rem 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; flex-wrap: wrap; border-left: 4px solid #2E7A6E; }
-        .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
-        .badge-public { background: #3498DB; color: white; }
-        .action-buttons { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
-        .btn { padding: 10px 22px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-primary { background: #FFC107; color: #0B2B40; }
-        .btn-pdf { background: #c0392b; color: white; }
-        .btn-info { background: #3498DB; color: white; }
-        .search-box { display: flex; align-items: center; background: #f7f3ec; border-radius: 40px; padding: 6px 18px; gap: 8px; }
-        .search-box input { border: none; background: transparent; outline: none; padding: 6px 0; width: 200px; }
-        .filter-select { padding: 6px 12px; border-radius: 40px; border: 1px solid #e8dccc; background: #f7f3ec; font-family: 'Inter', sans-serif; font-size: 0.8rem; cursor: pointer; }
-        .maps-gallery, .map-container, .chart-card, .data-section { background: white; border-radius: 28px; padding: 1.2rem; margin-bottom: 1.5rem; border: 1px solid #e8dccc; }
-        .maps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1rem; }
-        .map-card-image img { width: 100%; border-bottom: 2px solid #FFC107; border-radius: 16px 16px 0 0; }
-        .map-card-image { background: #faf7f2; border-radius: 20px; overflow: hidden; }
-        .map-caption { padding: 0.5rem; text-align: center; font-size: 0.75rem; }
-        .map-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1rem; }
-        .map-location { background: #fefcf9; border-radius: 20px; padding: 1rem; cursor: pointer; border: 1px solid #e8dccc; transition: all 0.2s; }
-        .map-location.selected { border: 2px solid #FFC107; background: #fffaf0; }
-        .location-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .location-name { font-weight: 800; color: #1A4A5F; }
-        .progress-bar { height: 6px; background: #e0d5c8; border-radius: 6px; margin: 8px 0; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #FFC107, #FF9800); border-radius: 6px; }
-        .status-badges { display: flex; gap: 8px; margin-top: 8px; font-size: 0.7rem; justify-content: space-between; }
-        .badge-reservado { background: #FFF3CD; color: #856404; padding: 2px 8px; border-radius: 20px; }
-        .badge-contrato { background: #D4EDDA; color: #155724; padding: 2px 8px; border-radius: 20px; }
-        .badge-disponivel { background: #F8D7DA; color: #721C24; padding: 2px 8px; border-radius: 20px; }
-        .warning-icon { color: #E67E22; margin-left: 5px; font-size: 0.7rem; cursor: help; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .kpi-card { background: white; border-radius: 24px; padding: 1rem; border: 1px solid #e8dccc; }
-        .kpi-value { font-size: 1.8rem; font-weight: 800; color: #0B2B40; }
-        .situacao-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-        .situacao-table th, .situacao-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #f0e6d8; }
-        .situacao-table th { background: #F9F1E8; }
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-        th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #f0e6d8; }
-        .footer { text-align: center; font-size: 0.7rem; color: #9b8e7a; margin-top: 1rem; }
-        .toast-message { position: fixed; bottom: 20px; right: 20px; background: #2E7A6E; color: white; padding: 12px 20px; border-radius: 40px; z-index: 2000; display: none; }
-        .charts-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem; }
-        .chart-card-pie { flex: 0.6; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; }
-        .chart-card-gauge { flex: 1.4; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; text-align: center; }
-        @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } .action-buttons { flex-direction: column; align-items: stretch; } .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; } }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #eef2f0;
+            color: #1a2e1f;
+            padding: 24px 20px;
+        }
+
+        /* dashboard container */
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .hero {
+            background: linear-gradient(135deg, #0f2c1c 0%, #1a472a 100%);
+            border-radius: 32px;
+            padding: 24px 32px;
+            margin-bottom: 28px;
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.15);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        .hero h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .hero h1 span {
+            background: rgba(255,215,0,0.2);
+            padding: 4px 12px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            backdrop-filter: blur(2px);
+        }
+        .hero-badge {
+            background: rgba(255,255,255,0.12);
+            padding: 8px 18px;
+            border-radius: 60px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: baseline;
+        }
+        .last-update {
+            font-size: 0.85rem;
+            color: #cfebd4;
+            font-weight: 500;
+        }
+        .refresh-btn {
+            background: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #1a472a;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .refresh-btn:hover {
+            background: #f5f9e3;
+            transform: scale(0.97);
+        }
+
+        /* KPI cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        .card-kpi {
+            background: white;
+            border-radius: 28px;
+            padding: 20px 22px;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.03);
+            transition: all 0.2s;
+            border: 1px solid #dee6e2;
+        }
+        .card-kpi h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: #5b7c6b;
+            margin-bottom: 12px;
+        }
+        .kpi-value {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #1a472a;
+            line-height: 1.2;
+        }
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: #6f8f7c;
+            margin-top: 8px;
+        }
+        .separator {
+            color: #cbdcd3;
+            margin: 0 4px;
+        }
+
+        /* gráficos e tabela */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 28px;
+            padding: 18px 16px 16px 16px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.04);
+            border: 1px solid #e2ece6;
+            transition: all 0.2s;
+        }
+        .chart-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            padding-left: 8px;
+            border-left: 5px solid #1a472a;
+            color: #1e3827;
+        }
+        canvas {
+            max-height: 280px;
+            width: 100%;
+        }
+
+        .table-wrapper {
+            background: white;
+            border-radius: 28px;
+            padding: 8px 4px 8px 0;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+            border: 1px solid #e2ece6;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th {
+            text-align: left;
+            padding: 16px 16px 12px 20px;
+            background: #f8fbf9;
+            font-weight: 600;
+            color: #1d4d2d;
+            border-bottom: 2px solid #d4e2da;
+        }
+        td {
+            padding: 14px 16px 14px 20px;
+            border-bottom: 1px solid #ecf3ef;
+            color: #1f2f26;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            background: #f0f3f1;
+        }
+        .badge-assinado {
+            background: #e0f2e5;
+            color: #0f542b;
+            border-left: 3px solid #28a745;
+        }
+        .badge-reservado {
+            background: #fff1df;
+            color: #b45f06;
+            border-left: 3px solid #f39c12;
+        }
+        .empresa-nome {
+            font-weight: 600;
+            color: #0e2b1c;
+        }
+        .valor-cell {
+            font-weight: 700;
+            font-family: monospace;
+            letter-spacing: 0.3px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #8aa397;
+            font-weight: 500;
+        }
+        .error-message {
+            background: #ffe6e3;
+            border-radius: 20px;
+            padding: 18px;
+            color: #b13b2d;
+            text-align: center;
+            margin-top: 20px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 0.75rem;
+            color: #8aa397;
+        }
+        @media (max-width: 780px) {
+            .charts-row { grid-template-columns: 1fr; }
+            .hero { flex-direction: column; align-items: flex-start; }
+            .kpi-value { font-size: 1.9rem; }
+        }
     </style>
 </head>
 <body>
-
-<div class="dashboard-container" id="dashboardToExport">
-    <div class="femix-header">
-        <div class="logo-area"><div class="logo-simbolo">F</div><div class="logo-texto"><h2>FEMIX 2026</h2><p>Feira Multissetorial de Concórdia</p></div></div>
-        <div class="mode-badge"><i class="fas fa-cloud-download-alt"></i> Automático (Google Sheets)</div>
-    </div>
-
-    <div class="status-bar">
-        <div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span class="badge badge-public" id="syncStatus">Carregando planilha...</span></div>
-        <div><i class="fas fa-info-circle"></i> Dados carregados automaticamente via API GViz</div>
-    </div>
-
-    <div class="action-buttons">
-        <button class="btn btn-primary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-        <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-        <button class="btn btn-info" id="refreshBtn"><i class="fas fa-sync-alt"></i> Recarregar Planilha</button>
-    </div>
-
-    <!-- Mapa interativo -->
-    <div class="map-container"><h3><i class="fas fa-map-marked-alt"></i> Mapa Interativo</h3><div class="map-grid" id="mapGrid"></div><p style="font-size:0.7rem; text-align:center;">Clique em um local para filtrar a tabela</p></div>
-
-    <!-- KPIs -->
-    <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-title">💰 RECEITA TOTAL</div><div class="kpi-value" id="totalRevenue">R$ 0</div></div>
-        <div class="kpi-card"><div class="kpi-title">💵 VALOR OCUPADO</div><div class="kpi-value" id="occupiedRevenue">R$ 0</div></div>
-        <div class="kpi-card"><div class="kpi-title">🏢 EMPRESAS</div><div class="kpi-value" id="totalCompanies">0</div></div>
-        <div class="kpi-card"><div class="kpi-title">⭐ TICKET MÉDIO</div><div class="kpi-value" id="avgTicket">R$ 0</div></div>
-        <div class="kpi-card"><div class="kpi-title">📊 OCUPAÇÃO</div><div class="kpi-value" id="occupancyRate">0%</div></div>
-    </div>
-
-    <!-- Gráficos -->
-    <div class="charts-row">
-        <div class="chart-card-pie"><h3><i class="fas fa-chart-pie"></i> Proporção por Situação</h3><div style="max-width:260px;margin:0 auto"><canvas id="piePercentChart"></canvas></div><div id="piePercentLegend" style="margin-top:1rem;text-align:center;font-size:0.75rem;"></div></div>
-        <div class="chart-card-gauge"><h3><i class="fas fa-tachometer-alt"></i> Ocupação Total</h3><div style="position:relative;max-width:280px;margin:0 auto"><canvas id="gaugeChart"></canvas><div id="gaugeCenterLabel" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.5rem;font-weight:800;color:#1A4A5F;"></div></div><div id="gaugeLabel"></div></div>
-    </div>
-
-    <!-- Tabela situação por local -->
-    <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto"><table class="situacao-table"><thead><th>Local</th><th>Total</th><th>Disponíveis</th><th>Reservados</th><th>Contrato</th><th>% Ocup</th></thead><tbody id="situacaoTableBody"></tbody></table></div></div>
-
-    <!-- Tabela de empresas -->
-    <div class="data-section">
-        <div class="table-header" style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
-            <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Buscar empresa, local..."></div>
-            <select id="locationFilter" class="filter-select"><option value="">Todos os locais</option></select>
-            <select id="situationFilter" class="filter-select"><option value="">Todas</option><option value="Disponível">Disponível</option><option value="Reservado">Reservado</option><option value="Contrato Assinado">Contrato Assinado</option></select>
-            <select id="sortOrder" class="filter-select"><option value="asc">A-Z</option><option value="desc">Z-A</option></select>
+<div class="dashboard">
+    <div class="hero">
+        <h1>
+            🏟️ FEMIX 2026 
+            <span>Gestão de Espaços</span>
+        </h1>
+        <div class="hero-badge">
+            <div class="last-update" id="lastUpdateText">🔄 A carregar dados...</div>
+            <button class="refresh-btn" id="manualRefreshBtn">⟳ Atualizar agora</button>
         </div>
-        <div id="filterTotals" style="background:#f9f1e8; border-radius:16px; padding:0.5rem 1rem; margin-bottom:1rem; display:flex; gap:2rem; flex-wrap:wrap;"></div>
-        <div class="table-wrapper"><table id="salesTable"><thead><th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th></thead><tbody id="tableBody"></tbody></table></div>
     </div>
 
-    <!-- Mapas oficiais -->
-    <div class="maps-gallery"><h3><i class="fas fa-map"></i> Plantas Oficiais</h3><div class="maps-grid"><div class="map-card-image"><img src="mapa_implantacao_geral.png" onerror="this.style.display='none';"><div class="map-caption">Implantação Geral</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao - Copia.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (todos)</div></div></div></div>
+    <!-- KPI cards -->
+    <div class="kpi-grid" id="kpiContainer">
+        <div class="card-kpi"><h3>💰 Receita total</h3><div class="kpi-value" id="totalRevenue">--</div><div class="kpi-sub">valores líquidos</div></div>
+        <div class="card-kpi"><h3>📦 Contratos / Espaços</h3><div class="kpi-value" id="totalContracts">--</div><div class="kpi-sub">reservas + assinados</div></div>
+        <div class="card-kpi"><h3>📍 Locais ativos</h3><div class="kpi-value" id="uniqueLocals">--</div><div class="kpi-sub">espaços distintos</div></div>
+        <div class="card-kpi"><h3>📈 Ticket médio</h3><div class="kpi-value" id="avgTicket">--</div><div class="kpi-sub">por contrato</div></div>
+    </div>
 
-    <div class="footer">© FEMIX 2026 - Sandra Batistella | <span id="lastUpdate">--</span></div>
+    <!-- gráficos lado a lado -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h3>📊 Receita por Local</h3>
+            <canvas id="barChartLocal" width="400" height="250" style="max-width:100%; height:auto;"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>📌 Distribuição por Situação</h3>
+            <canvas id="pieChartStatus" width="400" height="250" style="max-width:100%; height:auto;"></canvas>
+        </div>
+    </div>
+
+    <!-- tabela detalhada -->
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead>
+                <tr><th>Local</th><th>Empresa / Expositor</th><th>Situação</th><th>Valor (R$)</th></tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="4" class="empty-state">⏳ Aguardando carregamento da planilha...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <footer>Dados sincronizados automaticamente a cada 30 segundos • Fonte: Google Sheets (public CSV)</footer>
 </div>
-<div id="toastMessage" class="toast-message"></div>
 
 <script>
-    // ========== CONFIGURAÇÃO CORRETA (COM SEU ID REAL) ==========
-    const SPREADSHEET_ID = "1wI06h0qAHNUJazIraSNe3UAK48xnMUjdnr98tY-iTY8";
-    const SHEET_NAME = "Planilha1";  // Se sua aba tiver outro nome, altere aqui (ex: "FEMIX", "Dados")
+    // URL da planilha pública (formato CSV)
+    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQupd8Nw6l-5dn9JPSFqDDUetYJv7BbX_2lewwcckGriWaCvWphzs9Vtj8FgRa4tKSFM55S4M4xr_hI/pub?output=csv";
     
-    // URL que sempre retorna CSV
-    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+    // Referências globais para gráficos
+    let barChart = null;
+    let pieChart = null;
+    let refreshInterval = null;
+    let isFetching = false;
 
-    // Capacidades dos locais (fixas)
-    const locationCapacities = {
-        "Tancredão - Ind e Com": 92, "Multiuso - Cdia Trend": 18, "Externo - Motos": 2,
-        "Externo - Semi Novos": 10, "Externo - Concessionárias": 12, "Externo - Agropet": 2,
-        "Externo - Parque de Diversões": 1, "Externo - Caminhões": 5, "Externo - Espaços Privilegiados": 5,
-        "Externo - Alimentação": 11, "Externo - Demais Espaços": 7, "Espaço Conceito": 1,
-        "Externo - Churrasqueiras": 4, "Restaurante": 1
-    };
-    const totalCapacidade = Object.values(locationCapacities).reduce((a,b)=>a+b,0);
-
-    let salesData = [];
-    let currentLocationFilter = null, currentSituationFilter = null, currentSearchTerm = "", currentSortOrder = "asc";
-    let pieChart, gaugeChart;
-
-    // Função para converter valor com vírgula/ponto
-    function parseValorBrasil(valorStr) {
-        if (!valorStr) return 0;
-        let cleaned = valorStr.trim().replace(/^["']|["']$/g, '');
-        cleaned = cleaned.replace(/\./g, '');      // remove pontos de milhar
-        cleaned = cleaned.replace(',', '.');       // vírgula decimal vira ponto
-        cleaned = cleaned.replace(/[^0-9.-]/g, '');
-        let num = parseFloat(cleaned);
-        return isNaN(num) ? 0 : num;
+    // Utilitário: limpeza de valor monetário (R$ 1.234,56 ou 1234.56)
+    function parseCurrency(value) {
+        if (!value || value === "") return 0;
+        // Remove espaços, R$ e caracteres não numéricos exceto vírgula/ponto/hífen
+        let cleaned = String(value).trim();
+        // Se tiver R$ ou símbolos
+        cleaned = cleaned.replace(/[^\d,.-]/g, '');
+        // Substitui vírgula decimal por ponto
+        cleaned = cleaned.replace(',', '.');
+        // Remove pontos de milhar (mas mantém último ponto se houver vários? Remove pontos que não são decimais)
+        // se conter mais de um ponto, pode ser milhar. Ex: 1.234.567 -> remove pontos e deixa só números
+        if ((cleaned.match(/\./g) || []).length > 1) {
+            cleaned = cleaned.replace(/\./g, '');
+        }
+        let number = parseFloat(cleaned);
+        return isNaN(number) ? 0 : number;
     }
 
-    function deriveSegmento(empresa) {
-        const nome = empresa.toLowerCase();
-        if (nome.includes("móveis") || nome.includes("moveis")) return "Móveis";
-        if (nome.includes("auto") || nome.includes("motos") || nome.includes("veículos")) return "Veículos";
-        if (nome.includes("saúde") || nome.includes("med")) return "Saúde";
-        if (nome.includes("aliment") || nome.includes("restaurante") || nome.includes("churras")) return "Alimentação";
-        if (nome.includes("moda") || nome.includes("joia") || nome.includes("roupa")) return "Moda";
-        return "Diversos";
+    // Normalizar situação: qualquer variação de "assinado" -> Assinado, senão Reservado
+    function normalizeSituation(sitRaw) {
+        if (!sitRaw) return "Reservado";
+        const lower = sitRaw.toLowerCase().trim();
+        if (lower.includes("assinado") || lower === "assinado" || lower.includes("assigned") || lower === "contrato assinado") {
+            return "Assinado";
+        }
+        return "Reservado";
     }
 
-    async function loadFromGoogleSheets() {
-        try {
-            document.getElementById("syncStatus").innerHTML = "Carregando da planilha...";
-            showToast("Carregando dados automaticamente...");
-            const response = await fetch(CSV_URL, { cache: "no-store" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const csvText = await response.text();
-            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
-            if (lines.length < 2) throw new Error("CSV vazio ou formato inválido");
+    // Atualiza KPIs, tabela e gráficos
+    function renderDashboard(validRows) {
+        if (!validRows || validRows.length === 0) {
+            // estado vazio
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="4" class="empty-state">📭 Nenhum dado encontrado na planilha. Verifique colunas (Local, Empresa, Qtd, Situação, Valor).</td></tr>';
+            document.getElementById('totalRevenue').innerText = 'R$ 0';
+            document.getElementById('totalContracts').innerText = '0';
+            document.getElementById('uniqueLocals').innerText = '0';
+            document.getElementById('avgTicket').innerText = 'R$ 0';
+            // destruir gráficos existentes
+            if (barChart) { barChart.destroy(); barChart = null; }
+            if (pieChart) { pieChart.destroy(); pieChart = null; }
+            return;
+        }
+
+        // Agregadores
+        const localRevenue = new Map();      // local -> soma valor
+        const statusCount = { "Assinado": 0, "Reservado": 0 };
+        let totalRevenueSum = 0;
+        let totalContractsCount = validRows.length;
+        
+        // também para tabela
+        let tableHtml = '';
+        
+        for (const row of validRows) {
+            const local = row.local || "Não definido";
+            const empresa = row.empresa || "Anônimo";
+            const situacaoRaw = row.situacao || "";
+            const situacaoNorm = normalizeSituation(situacaoRaw);
+            const valor = row.valor;
             
-            // Cabeçalhos
-            const headers = lines[0].split(",").map(h => h.replace(/["']/g, '').trim().toLowerCase());
-            let colEmpresa = headers.findIndex(h => h.includes("empresa") || h === "expositor");
-            let colLocal = headers.findIndex(h => h.includes("local") || h === "espaço");
-            let colQuant = headers.findIndex(h => h.includes("quantidade") || h === "qtde" || h === "qtd");
-            let colSitu = headers.findIndex(h => h.includes("situação") || h.includes("situacao") || h === "status");
-            let colValor = headers.findIndex(h => h.includes("valor") || h === "receita" || h === "total");
-            if (colEmpresa === -1) colEmpresa = 0;
-            if (colLocal === -1) colLocal = 1;
-            if (colQuant === -1) colQuant = 2;
-            if (colSitu === -1) colSitu = 3;
-            if (colValor === -1) colValor = 4;
+            // soma receita
+            totalRevenueSum += valor;
+            // receita por local
+            localRevenue.set(local, (localRevenue.get(local) || 0) + valor);
+            // status count
+            statusCount[situacaoNorm] = (statusCount[situacaoNorm] || 0) + 1;
             
-            const parsed = [];
-            for (let i = 1; i < lines.length; i++) {
-                // Parse CSV respeitando aspas
-                let row = [];
-                let inQuote = false, current = "";
-                for (let ch of lines[i]) {
-                    if (ch === '"') inQuote = !inQuote;
-                    else if (ch === ',' && !inQuote) { row.push(current.trim()); current = ""; }
-                    else current += ch;
+            // formata valor para tabela
+            const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+            const badgeClass = situacaoNorm === "Assinado" ? "badge-assinado" : "badge-reservado";
+            tableHtml += `<tr>
+                <td><strong>${escapeHtml(local)}</strong></td>
+                <td><span class="empresa-nome">${escapeHtml(empresa)}</span></td>
+                <td><span class="badge ${badgeClass}">${escapeHtml(situacaoNorm)}</span></td>
+                <td class="valor-cell">${valorFormatado}</td>
+            </tr>`;
+        }
+        
+        // popular tabela
+        document.getElementById('tableBody').innerHTML = tableHtml;
+        
+        // KPIs
+        const uniqueLocals = localRevenue.size;
+        const avgTicket = totalContractsCount > 0 ? totalRevenueSum / totalContractsCount : 0;
+        document.getElementById('totalRevenue').innerHTML = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenueSum);
+        document.getElementById('totalContracts').innerText = totalContractsCount;
+        document.getElementById('uniqueLocals').innerText = uniqueLocals;
+        document.getElementById('avgTicket').innerHTML = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
+        
+        // preparar dados para gráfico de barras (receita por local) - ordenar por valor decrescente
+        const sortedLocals = Array.from(localRevenue.entries()).sort((a,b) => b[1] - a[1]);
+        const labelsBar = sortedLocals.map(item => item[0]);
+        const dataBar = sortedLocals.map(item => item[1]);
+        
+        // gráfico de pizza (status)
+        const statusLabels = Object.keys(statusCount);
+        const statusData = statusLabels.map(st => statusCount[st]);
+        
+        // destruir gráficos antigos para recriar com novos dados
+        if (barChart) barChart.destroy();
+        if (pieChart) pieChart.destroy();
+        
+        const ctxBar = document.getElementById('barChartLocal').getContext('2d');
+        const ctxPie = document.getElementById('pieChartStatus').getContext('2d');
+        
+        barChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: labelsBar,
+                datasets: [{
+                    label: 'Receita (R$)',
+                    data: dataBar,
+                    backgroundColor: '#2c6e49',
+                    borderRadius: 8,
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: { callbacks: { label: (ctx) => `R$ ${ctx.raw.toLocaleString('pt-BR')}` } },
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: { ticks: { callback: (val) => 'R$ ' + val.toLocaleString('pt-BR') }, beginAtZero: true, title: { display: true, text: 'Valor (R$)' } },
+                    x: { ticks: { autoSkip: true, maxRotation: 35, minRotation: 30 } }
                 }
-                row.push(current.trim());
-                if (row.length < 5) continue;
-                
-                let empresa = row[colEmpresa]?.replace(/^["']|["']$/g, '') || "";
-                if (!empresa) continue;
-                let localRaw = row[colLocal]?.replace(/^["']|["']$/g, '') || "";
-                if (localRaw === "Externo") localRaw = "Externo - Demais Espaços";
-                let quantidade = parseInt(row[colQuant]) || 1;
-                let situacaoRaw = row[colSitu]?.replace(/^["']|["']$/g, '') || "Disponível";
-                let situacao = "Disponível";
-                if (situacaoRaw.toLowerCase().includes("reserv")) situacao = "Reservado";
-                else if (situacaoRaw.toLowerCase().includes("contrato")) situacao = "Contrato Assinado";
-                let valor = parseValorBrasil(row[colValor]);
-                parsed.push({ empresa, local: localRaw, quantidade, situacao, valor, segmento: deriveSegmento(empresa) });
             }
-            if (parsed.length === 0) throw new Error("Nenhum dado válido encontrado");
-            salesData = parsed;
-            document.getElementById("lastUpdate").innerHTML = `Última atualização: ${new Date().toLocaleString()}`;
-            document.getElementById("syncStatus").innerHTML = "✅ Automático (Google Sheets)";
-            showToast(`✅ ${salesData.length} empresas carregadas!`);
-            return true;
-        } catch(e) {
-            console.error("Erro ao carregar:", e);
-            document.getElementById("syncStatus").innerHTML = "⚠️ Erro na conexão - usando fallback";
-            showToast("Falha ao carregar planilha. Usando dados de exemplo.", true);
-            loadFallbackData();
-            return false;
-        }
-    }
-
-    function loadFallbackData() {
-        const raw = [
-            ["Crecerto","Tancredão - Ind e Com",2,"Reservado",13184],["Detalhes Móveis","Tancredão - Ind e Com",2,"Reservado",18952],
-            ["Consórcio Itá","Tancredão - Ind e Com",2,"Reservado",9888],["Sicredi","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["Unimed","Tancredão - Ind e Com",2,"Reservado",9888],["BTM Brindes","Tancredão - Ind e Com",2,"Contrato Assinado",9888]
-        ];
-        salesData = raw.map(r => ({ empresa: r[0], local: r[1], quantidade: r[2], situacao: r[3], valor: r[4], segmento: deriveSegmento(r[0]) }));
-        document.getElementById("lastUpdate").innerHTML = `Dados de exemplo (fallback) - verifique sua planilha`;
-    }
-
-    // Funções de filtro, tabela, gráficos
-    function getFilteredData() {
-        let filtered = salesData.filter(i => {
-            if (currentLocationFilter && i.local !== currentLocationFilter) return false;
-            if (currentSituationFilter && i.situacao !== currentSituationFilter) return false;
-            if (currentSearchTerm) {
-                const t = currentSearchTerm.toLowerCase();
-                return i.empresa.toLowerCase().includes(t) || i.local.toLowerCase().includes(t) || i.segmento.toLowerCase().includes(t);
+        });
+        
+        pieChart = new Chart(ctxPie, {
+            type: 'pie',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusData,
+                    backgroundColor: ['#f39c12', '#28a745'],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} contratos (${((ctx.raw / totalContractsCount)*100).toFixed(1)}%)` } }
+                }
             }
-            return true;
         });
-        filtered.sort((a,b) => {
-            const na = a.empresa.toLowerCase(), nb = b.empresa.toLowerCase();
-            return currentSortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+    }
+    
+    // pequena proteção XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
         });
-        return filtered;
     }
-
-    function updateFilterTotals() {
-        const filtered = getFilteredData();
-        const totalQuant = filtered.reduce((s,i)=>s+(i.quantidade||1),0);
-        const totalValor = filtered.reduce((s,i)=>s+i.valor,0);
-        document.getElementById("filterTotals").innerHTML = `<span>Total de estandes: ${totalQuant}</span><span>Valor total: R$ ${totalValor.toLocaleString('pt-BR')}</span>`;
-    }
-
-    function updateKPIs() {
-        const totalRev = salesData.reduce((s,i)=>s+i.valor,0);
-        const totalEmp = salesData.length;
-        const ticket = totalEmp ? totalRev/totalEmp : 0;
-        const totalOcup = salesData.reduce((s,i)=>s+(i.quantidade||1),0);
-        const ocupPct = Math.min(100, (totalOcup/totalCapacidade)*100);
-        const ocupValor = salesData.filter(i=>i.situacao!=="Disponível").reduce((s,i)=>s+i.valor,0);
-        document.getElementById("totalRevenue").innerHTML = `R$ ${totalRev.toLocaleString('pt-BR')}`;
-        document.getElementById("occupiedRevenue").innerHTML = `R$ ${ocupValor.toLocaleString('pt-BR')}`;
-        document.getElementById("totalCompanies").innerHTML = totalEmp;
-        document.getElementById("avgTicket").innerHTML = `R$ ${Math.round(ticket).toLocaleString('pt-BR')}`;
-        document.getElementById("occupancyRate").innerHTML = `${Math.round(ocupPct)}%`;
-        return ocupPct;
-    }
-
-    function renderMap() {
-        let stats = {};
-        for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0, receita: 0 };
-        salesData.forEach(i => {
-            let q = i.quantidade || 1;
-            if (i.situacao === "Reservado") stats[i.local].reservado += q;
-            else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
-            stats[i.local].receita += i.valor;
-        });
-        let grid = document.getElementById("mapGrid");
-        grid.innerHTML = "";
-        for (let [local, data] of Object.entries(stats)) {
-            let ocupReal = data.reservado + data.contrato;
-            let perc = Math.min(100, (ocupReal / data.total) * 100);
-            let hasExcess = ocupReal > data.total;
-            let card = document.createElement("div");
-            card.className = `map-location ${currentLocationFilter === local ? 'selected' : ''}`;
-            card.onclick = () => {
-                currentLocationFilter = currentLocationFilter === local ? null : local;
-                document.getElementById('locationFilter').value = currentLocationFilter || '';
-                renderMap();
-                renderTable();
-                updateFilterTotals();
-            };
-            let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes">⚠️</span>` : '';
-            card.innerHTML = `
-                <div class="location-header"><div class="location-name"><i class="fas fa-map-marker"></i> ${local} ${warning}</div></div>
-                <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div>
-                <div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div>
-                <div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span></div>
-            `;
-            grid.appendChild(card);
+    
+    // carregar dados do CSV com PapaParse + tratamento robusto de colunas
+    async function fetchSheetData() {
+        if (isFetching) return;
+        isFetching = true;
+        const loadingDiv = document.getElementById('tableBody');
+        // mostra estado de carregamento (mas sem perder interface)
+        if (loadingDiv && !loadingDiv.innerHTML.includes("A carregar")) {
+            // Não substituir se já tiver dados, apenas indicador sutil opcional
+        }
+        const updateElement = document.getElementById('lastUpdateText');
+        if (updateElement) updateElement.innerHTML = "⏳ Sincronizando...";
+        
+        try {
+            const urlWithCache = SPREADSHEET_CSV_URL + "?t=" + new Date().getTime();
+            const response = await fetch(urlWithCache);
+            if (!response.ok) throw new Error(`HTTP ${response.status} - Falha na requisição`);
+            const csvText = await response.text();
+            
+            // Usar PapaParse para parsing confiável (cuidado com vírgulas em campos)
+            Papa.parse(csvText, {
+                complete: (results) => {
+                    try {
+                        let rows = results.data;
+                        if (!rows || rows.length < 2) {
+                            throw new Error("Planilha sem dados ou formato inválido");
+                        }
+                        // Remover possíveis linhas totalmente vazias
+                        rows = rows.filter(row => row.length >= 1 && row.some(cell => cell && cell.trim() !== ""));
+                        if (rows.length === 0) throw new Error("Nenhuma linha com dados");
+                        
+                        // Identificar se primeira linha é cabeçalho (contém "local" ou "empresa")
+                        const firstRow = rows[0];
+                        const isHeader = firstRow.some(cell => 
+                            cell && (cell.toString().toLowerCase().includes("local") || 
+                            cell.toString().toLowerCase().includes("empresa") ||
+                            cell.toString().toLowerCase().includes("situação"))
+                        );
+                        let dataRows = isHeader ? rows.slice(1) : rows;
+                        // filtrar linhas que tenham pelo menos 3 colunas preenchidas
+                        dataRows = dataRows.filter(r => r.length >= 3 && r[0] && r[0].trim() !== "");
+                        
+                        // Mapear colunas esperadas: [0] Local, [1] Empresa, [2] Quantidade (ignorado), [3] Situação, [4] Valor
+                        const parsed = [];
+                        for (let row of dataRows) {
+                            if (row.length < 4) continue; // precisa no mínimo Local, Empresa, Situação, Valor (valor pode ser zero)
+                            const localRaw = (row[0] || "").trim();
+                            const empresaRaw = (row[1] || "").trim();
+                            const situacaoRaw = (row[3] || "").trim();
+                            let valorRaw = row[4] !== undefined ? row[4].trim() : "0";
+                            // se não houver valor na coluna 5, tenta coluna 4 ou assume 0
+                            if (valorRaw === "" && row[5]) valorRaw = row[5].trim();
+                            
+                            const valorNum = parseCurrency(valorRaw);
+                            if (empresaRaw === "") continue; // empresa obrigatória
+                            parsed.push({
+                                local: localRaw || "Local não informado",
+                                empresa: empresaRaw,
+                                situacao: situacaoRaw,
+                                valor: valorNum
+                            });
+                        }
+                        
+                        if (parsed.length === 0) {
+                            throw new Error("Nenhum registro válido após processamento. Verifique as colunas: Local, Empresa, Situação, Valor (em ordem).");
+                        }
+                        
+                        // Renderizar com os dados válidos
+                        renderDashboard(parsed);
+                        const now = new Date();
+                        const formattedTime = now.toLocaleTimeString('pt-BR');
+                        if (updateElement) updateElement.innerHTML = `📅 Última atualização: ${formattedTime}`;
+                    } catch (parseErr) {
+                        showError("Erro ao interpretar os dados: " + parseErr.message);
+                        console.error(parseErr);
+                    }
+                    isFetching = false;
+                },
+                error: (err) => {
+                    showError("Falha no parse do CSV: " + err.message);
+                    isFetching = false;
+                    if (updateElement) updateElement.innerHTML = "⚠️ Erro na leitura";
+                },
+                skipEmptyLines: true,
+                delimiter: ",",
+                quoteChar: '"'
+            });
+        } catch (err) {
+            showError("Erro na conexão com a planilha: " + err.message);
+            if (updateElement) updateElement.innerHTML = "❌ Falha na atualização";
+            isFetching = false;
         }
     }
-
-    function renderSituacaoTable() {
-        let stats = {};
-        for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0 };
-        salesData.forEach(i => {
-            let q = i.quantidade || 1;
-            if (i.situacao === "Reservado") stats[i.local].reservado += q;
-            else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
-        });
-        let html = "";
-        for (let [local, data] of Object.entries(stats)) {
-            let ocup = data.reservado + data.contrato;
-            let disponivel = Math.max(0, data.total - ocup);
-            let perc = Math.min(100, Math.round((ocup / data.total) * 100));
-            html += `<tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</td></tr>`;
+    
+    function showError(msg) {
+        console.error(msg);
+        const tableBody = document.getElementById('tableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="empty-state" style="background:#fff1ef;">⚠️ ${escapeHtml(msg)}<br><small>Verifique se a planilha está publicada (Arquivo > Compartilhar > Publicar na web) como CSV.</small></td></tr>`;
         }
-        document.getElementById("situacaoTableBody").innerHTML = html;
+        // não quebrar KPIs, mas mostrar zeros
+        document.getElementById('totalRevenue').innerText = 'R$ 0';
+        document.getElementById('totalContracts').innerText = '0';
+        document.getElementById('uniqueLocals').innerText = '0';
+        document.getElementById('avgTicket').innerText = 'R$ 0';
+        if (barChart) { barChart.destroy(); barChart = null; }
+        if (pieChart) { pieChart.destroy(); pieChart = null; }
     }
-
-    function updatePieChart() {
-        let reservado = 0, contrato = 0;
-        salesData.forEach(i => { let q = i.quantidade || 1; if (i.situacao === "Reservado") reservado += q; else if (i.situacao === "Contrato Assinado") contrato += q; });
-        let disponivel = Math.max(0, totalCapacidade - (reservado+contrato));
-        let valores = [disponivel, reservado, contrato];
-        let labels = ["Disponível", "Reservado", "Contrato Assinado"];
-        let cores = ["#aaa", "#FFC107", "#2E7A6E"];
-        let total = valores.reduce((a,b)=>a+b,0);
-        if (pieChart) {
-            pieChart.data.datasets[0].data = valores;
-            pieChart.update();
-        } else {
-            const ctx = document.getElementById('piePercentChart').getContext('2d');
-            pieChart = new Chart(ctx, {
-                type: 'pie',
-                data: { labels, datasets: [{ data: valores, backgroundColor: cores, borderWidth: 0 }] },
-                options: { responsive: true, plugins: { tooltip: { callbacks: { label: ctx => { let val = ctx.raw; let pct = ((val/total)*100).toFixed(1); return `${ctx.label}: ${val} estandes (${pct}%)`; } } }, legend: { display: false } } }
+    
+    // função principal de atualização com feedback visual
+    async function refreshData() {
+        await fetchSheetData();
+    }
+    
+    // Inicialização com auto-refresh a cada 30 segundos
+    function startAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => {
+            refreshData().catch(e => console.warn("auto-refresh error", e));
+        }, 30000);
+    }
+    
+    // evento manual e inicialização
+    window.addEventListener('DOMContentLoaded', async () => {
+        // carregar dados imediatamente
+        await refreshData();
+        startAutoRefresh();
+        
+        const manualBtn = document.getElementById('manualRefreshBtn');
+        if (manualBtn) {
+            manualBtn.addEventListener('click', async () => {
+                // indicador visual
+                const btnSpan = manualBtn;
+                const originalText = btnSpan.innerHTML;
+                btnSpan.innerHTML = "⟳ Atualizando...";
+                await refreshData();
+                setTimeout(() => { if (btnSpan) btnSpan.innerHTML = originalText; }, 800);
             });
         }
-        let legendDiv = document.getElementById('piePercentLegend');
-        legendDiv.innerHTML = "";
-        for (let i=0; i<labels.length; i++) {
-            let pct = total ? ((valores[i]/total)*100).toFixed(1) : 0;
-            legendDiv.innerHTML += `<span style="display:inline-block; margin:0 8px;"><span style="background:${cores[i]}; width:12px; height:12px; display:inline-block; border-radius:2px;"></span> ${labels[i]}: ${valores[i]} (${pct}%)</span>`;
-        }
-    }
-
-    function updateGauge(ocupPct) {
-        const ctx = document.getElementById('gaugeChart').getContext('2d');
-        if (gaugeChart) gaugeChart.destroy();
-        gaugeChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: { datasets: [{ data: [ocupPct, 100-ocupPct], backgroundColor: ['#2E7A6E', '#e0d5c8'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '70%' }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { enabled: false }, legend: { display: false } } }
-        });
-        document.getElementById('gaugeLabel').innerText = `${Math.round(ocupPct)}% de ocupação total`;
-        document.getElementById('gaugeCenterLabel').innerText = `${Math.round(ocupPct)}%`;
-    }
-
-    function renderTable() {
-        let filtered = getFilteredData();
-        let tbody = document.getElementById("tableBody");
-        if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="6">Nenhum resultado</td></tr>`; updateFilterTotals(); return; }
-        tbody.innerHTML = filtered.map(item => `
-            <tr>
-                <td>${escapeHtml(item.empresa)}</td>
-                <td>${escapeHtml(item.local)}</td>
-                <td>${item.quantidade}</td>
-                <td>R$ ${item.valor.toLocaleString('pt-BR')}</td>
-                <td>${escapeHtml(item.segmento)}</td>
-                <td><span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span></td>
-            </tr>
-        `).join('');
-        updateFilterTotals();
-    }
-
-    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
-
-    function refreshAll() {
-        const ocup = updateKPIs();
-        renderMap();
-        renderSituacaoTable();
-        renderTable();
-        updatePieChart();
-        updateGauge(ocup);
-    }
-
-    async function exportToPDF() {
-        showToast("Gerando PDF...");
-        let el = document.getElementById("dashboardToExport");
-        try {
-            let canvas = await html2canvas(el, { scale: 2, useCORS: true });
-            let imgData = canvas.toDataURL('image/png');
-            let { jsPDF } = window.jspdf;
-            let pdf = new jsPDF('p', 'mm', 'a4');
-            let imgWidth = 210;
-            let imgHeight = (canvas.height * imgWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-            pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`);
-            showToast("PDF gerado!");
-        } catch(e) { showToast("Erro ao gerar PDF", true); }
-    }
-
-    function exportToExcel() {
-        let wsData = [["Empresa", "Local", "Quantidade", "Valor (R$)", "Segmento", "Situação"]];
-        salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao]));
-        let ws = XLSX.utils.aoa_to_sheet(wsData);
-        let wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas");
-        XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`);
-        showToast("Exportado Excel!");
-    }
-
-    function showToast(msg, isErr=false) {
-        const toast = document.getElementById('toastMessage');
-        toast.style.backgroundColor = isErr ? '#E67E22' : '#2E7A6E';
-        toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 3000);
-    }
-
-    function populateFilters() {
-        const locSelect = document.getElementById('locationFilter');
-        locSelect.innerHTML = '<option value="">Todos os locais</option>';
-        Object.keys(locationCapacities).sort().forEach(loc => {
-            let opt = document.createElement('option');
-            opt.value = loc;
-            opt.textContent = loc;
-            locSelect.appendChild(opt);
-        });
-        locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); });
-        document.getElementById('situationFilter').addEventListener('change', (e) => { currentSituationFilter = e.target.value || null; renderTable(); });
-        document.getElementById('sortOrder').addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTable(); });
-        document.getElementById('searchInput').addEventListener('input', (e) => { currentSearchTerm = e.target.value; renderTable(); });
-    }
-
-    // Eventos
-    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
-    document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
-    document.getElementById('refreshBtn').addEventListener('click', async () => { await loadFromGoogleSheets(); refreshAll(); });
-
-    // Inicialização
-    (async () => {
-        await loadFromGoogleSheets();
-        populateFilters();
-        refreshAll();
-    })();
+    });
+    
+    // cleanup opcional (não essencial)
+    window.addEventListener('beforeunload', () => {
+        if (refreshInterval) clearInterval(refreshInterval);
+    });
 </script>
 </body>
 </html>
