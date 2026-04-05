@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEMIX 2026 | Dashboard Ao Vivo</title>
+    <title>FEMIX 2026 | Dashboard Automático</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
@@ -20,22 +20,22 @@
         .logo-texto h2 { color: white; font-size: 1.6rem; }
         .logo-texto p { color: #FFE6B0; font-size: 0.7rem; }
         .mode-badge { background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 40px; color: #FFE0A3; font-size: 0.8rem; }
-        .admin-login-btn { background: #E67E22; border: none; padding: 6px 16px; border-radius: 40px; color: white; cursor: pointer; margin-left: 10px; }
         .status-bar { background: white; border-radius: 16px; padding: 0.8rem 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; flex-wrap: wrap; border-left: 4px solid #2E7A6E; }
         .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
         .badge-public { background: #3498DB; color: white; }
-        .badge-admin { background: #2E7A6E; color: white; }
         .action-buttons { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
         .btn { padding: 10px 22px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary { background: #FFC107; color: #0B2B40; }
         .btn-pdf { background: #c0392b; color: white; }
-        .btn-secondary { background: #1A4A5F; color: white; }
-        .btn-success { background: #2E7A6E; color: white; }
-        .btn-warning { background: #E67E22; color: white; }
+        .btn-info { background: #3498DB; color: white; }
         .search-box { display: flex; align-items: center; background: #f7f3ec; border-radius: 40px; padding: 6px 18px; gap: 8px; }
         .search-box input { border: none; background: transparent; outline: none; padding: 6px 0; width: 200px; }
         .filter-select { padding: 6px 12px; border-radius: 40px; border: 1px solid #e8dccc; background: #f7f3ec; font-family: 'Inter', sans-serif; font-size: 0.8rem; cursor: pointer; }
-        .map-container, .chart-card, .data-section { background: white; border-radius: 28px; padding: 1.2rem; margin-bottom: 1.5rem; border: 1px solid #e8dccc; }
+        .maps-gallery, .map-container, .chart-card, .data-section { background: white; border-radius: 28px; padding: 1.2rem; margin-bottom: 1.5rem; border: 1px solid #e8dccc; }
+        .maps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1rem; }
+        .map-card-image img { width: 100%; border-bottom: 2px solid #FFC107; border-radius: 16px 16px 0 0; }
+        .map-card-image { background: #faf7f2; border-radius: 20px; overflow: hidden; }
+        .map-caption { padding: 0.5rem; text-align: center; font-size: 0.75rem; }
         .map-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1rem; }
         .map-location { background: #fefcf9; border-radius: 20px; padding: 1rem; cursor: pointer; border: 1px solid #e8dccc; transition: all 0.2s; }
         .map-location.selected { border: 2px solid #FFC107; background: #fffaf0; }
@@ -51,141 +51,196 @@
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .kpi-card { background: white; border-radius: 24px; padding: 1rem; border: 1px solid #e8dccc; }
         .kpi-value { font-size: 1.8rem; font-weight: 800; color: #0B2B40; }
-        .charts-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem; }
-        .chart-card-pie { flex: 0.6; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; }
-        .chart-card-gauge { flex: 1.4; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; text-align: center; }
         .situacao-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
         .situacao-table th, .situacao-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #f0e6d8; }
         .situacao-table th { background: #F9F1E8; }
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
         th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #f0e6d8; }
-        .editable-cell { cursor: pointer; background: #fffef7; }
-        .admin-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
-        .admin-modal.active { display: flex; }
-        .admin-card { background: white; border-radius: 48px; padding: 2rem; width: 90%; max-width: 400px; text-align: center; }
-        .admin-input { width: 100%; padding: 10px; margin-bottom: 1rem; border: 1px solid #e8dccc; border-radius: 28px; }
-        .admin-btn { background: #FFC107; border: none; padding: 10px; border-radius: 40px; width: 100%; font-weight: 700; cursor: pointer; }
-        #editModal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 3000; }
-        #editModal > div { background: white; border-radius: 32px; padding: 1.5rem; width: 90%; max-width: 500px; }
-        #editModal input, #editModal select { width: 100%; margin: 8px 0; padding: 8px; border-radius: 28px; border: 1px solid #e8dccc; }
-        .toast-message { position: fixed; bottom: 20px; right: 20px; background: #2E7A6E; color: white; padding: 12px 20px; border-radius: 40px; z-index: 2000; display: none; }
         .footer { text-align: center; font-size: 0.7rem; color: #9b8e7a; margin-top: 1rem; }
-        @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } }
+        .toast-message { position: fixed; bottom: 20px; right: 20px; background: #2E7A6E; color: white; padding: 12px 20px; border-radius: 40px; z-index: 2000; display: none; }
+        .charts-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .chart-card-pie { flex: 0.6; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; }
+        .chart-card-gauge { flex: 1.4; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; text-align: center; }
+        @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } .action-buttons { flex-direction: column; align-items: stretch; } .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; } }
     </style>
 </head>
 <body>
-<div id="adminModal" class="admin-modal"><div class="admin-card"><div class="logo-simbolo" style="margin:0 auto 1rem;">F</div><h3>Acesso Administrador</h3><input type="text" id="adminUser" class="admin-input" placeholder="Usuário"><input type="password" id="adminPass" class="admin-input" placeholder="Senha"><button class="admin-btn" id="confirmLoginBtn">Entrar</button><button id="closeModalBtn" style="margin-top:0.5rem; background:none; border:none; cursor:pointer;">Cancelar</button><div id="adminLoginError" style="color:#c0392b; display:none;">Usuário ou senha incorretos</div></div></div>
-<div id="editModal"><div><h3>Editar Empresa</h3><input type="text" id="editEmpresa" placeholder="Empresa"><select id="editLocal"></select><input type="number" id="editQuantidade" placeholder="Quantidade" step="1"><input type="number" id="editValor" placeholder="Valor (R$)" step="0.01"><input type="text" id="editSegmento" placeholder="Segmento"><select id="editSituacao"><option value="Disponível">Disponível</option><option value="Reservado">Reservado</option><option value="Contrato Assinado">Contrato Assinado</option></select><div style="display:flex; gap:12px; margin-top:16px;"><button id="saveEditBtn" class="btn btn-primary">Salvar</button><button id="cancelEditBtn" class="btn btn-secondary">Cancelar</button></div></div></div>
 
 <div class="dashboard-container" id="dashboardToExport">
-    <div class="femix-header"><div class="logo-area"><div class="logo-simbolo">F</div><div class="logo-texto"><h2>FEMIX 2026</h2><p>Feira Multissetorial de Concórdia</p></div></div><div><div class="mode-badge" id="modeBadge"><i class="fas fa-eye"></i> Modo Público</div><button class="admin-login-btn" id="openAdminBtn"><i class="fas fa-user-shield"></i> Área Administrativa</button></div></div>
-    <div class="status-bar"><div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span id="modeStatus" class="badge badge-public">Visualização Pública</span></div><div><i class="fas fa-cloud-download-alt"></i> Dados carregados da planilha ao vivo</div></div>
-    <div class="action-buttons" id="actionButtons"><button class="btn btn-primary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>
+    <div class="femix-header">
+        <div class="logo-area"><div class="logo-simbolo">F</div><div class="logo-texto"><h2>FEMIX 2026</h2><p>Feira Multissetorial de Concórdia</p></div></div>
+        <div class="mode-badge"><i class="fas fa-cloud-download-alt"></i> Automático (Google Sheets)</div>
+    </div>
+
+    <div class="status-bar">
+        <div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span class="badge badge-public" id="syncStatus">Carregando planilha...</span></div>
+        <div><i class="fas fa-info-circle"></i> Dados carregados automaticamente via API GViz</div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn btn-primary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+        <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+        <button class="btn btn-info" id="refreshBtn"><i class="fas fa-sync-alt"></i> Recarregar Planilha</button>
+    </div>
+
+    <!-- Mapa interativo -->
     <div class="map-container"><h3><i class="fas fa-map-marked-alt"></i> Mapa Interativo</h3><div class="map-grid" id="mapGrid"></div><p style="font-size:0.7rem; text-align:center;">Clique em um local para filtrar a tabela</p></div>
-    <div class="kpi-grid"><div class="kpi-card"><div class="kpi-title">💰 RECEITA TOTAL</div><div class="kpi-value" id="totalRevenue">R$ 0</div></div><div class="kpi-card"><div class="kpi-title">💵 VALOR OCUPADO (Reservado+Contrato)</div><div class="kpi-value" id="occupiedRevenue">R$ 0</div></div><div class="kpi-card"><div class="kpi-title">🏢 EMPRESAS</div><div class="kpi-value" id="totalCompanies">0</div></div><div class="kpi-card"><div class="kpi-title">⭐ TICKET MÉDIO</div><div class="kpi-value" id="avgTicket">R$ 0</div></div><div class="kpi-card"><div class="kpi-title">📊 OCUPAÇÃO</div><div class="kpi-value" id="occupancyRate">0%</div></div></div>
-    <div class="charts-row"><div class="chart-card-pie"><h3><i class="fas fa-chart-pie"></i> Proporção por Situação</h3><div style="max-width: 260px; margin: 0 auto;"><canvas id="piePercentChart"></canvas></div><div id="piePercentLegend" style="margin-top:1rem; text-align:center; font-size:0.75rem;"></div></div><div class="chart-card-gauge"><h3><i class="fas fa-tachometer-alt"></i> Ocupação Total da Feira</h3><div style="position:relative; max-width:280px; margin:0 auto;"><canvas id="gaugeChart"></canvas><div id="gaugeCenterLabel" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.5rem; font-weight:800; color:#1A4A5F;"></div></div><div id="gaugeLabel"></div></div></div>
-    <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead><th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th></thead><tbody id="situacaoTableBody"></tbody></table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
-    <div class="data-section"><div style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;"><div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Buscar empresa, local..."></div><select id="locationFilter" class="filter-select"><option value="">Todos os locais</option></select><select id="situationFilter" class="filter-select"><option value="">Todas as situações</option><option value="Disponível">Disponível</option><option value="Reservado">Reservado</option><option value="Contrato Assinado">Contrato Assinado</option></select><select id="sortOrder" class="filter-select"><option value="asc">Ordem Alfabética (A-Z)</option><option value="desc">Ordem Alfabética (Z-A)</option></select><div><span id="editHint"><i class="fas fa-lock"></i> Modo visualização</span></div></div><div id="filterTotals" style="background:#f9f1e8; border-radius:16px; padding:0.5rem 1rem; margin-bottom:1rem; display:flex; gap:2rem; flex-wrap:wrap;"><span>Total de estandes: 0</span><span>Valor total: R$ 0</span></div><div class="table-wrapper"><table id="salesTable"><thead><th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th><th id="actionsHeader"></th></thead><tbody id="tableBody"></tbody></table></div></div>
-    <div class="footer">© FEMIX 2026 - Sandra Batistella | Dados carregados automaticamente da planilha oficial | Capacidades conforme cadastro</div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-title">💰 RECEITA TOTAL</div><div class="kpi-value" id="totalRevenue">R$ 0</div></div>
+        <div class="kpi-card"><div class="kpi-title">💵 VALOR OCUPADO</div><div class="kpi-value" id="occupiedRevenue">R$ 0</div></div>
+        <div class="kpi-card"><div class="kpi-title">🏢 EMPRESAS</div><div class="kpi-value" id="totalCompanies">0</div></div>
+        <div class="kpi-card"><div class="kpi-title">⭐ TICKET MÉDIO</div><div class="kpi-value" id="avgTicket">R$ 0</div></div>
+        <div class="kpi-card"><div class="kpi-title">📊 OCUPAÇÃO</div><div class="kpi-value" id="occupancyRate">0%</div></div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-row">
+        <div class="chart-card-pie"><h3><i class="fas fa-chart-pie"></i> Proporção por Situação</h3><div style="max-width:260px;margin:0 auto"><canvas id="piePercentChart"></canvas></div><div id="piePercentLegend" style="margin-top:1rem;text-align:center;font-size:0.75rem;"></div></div>
+        <div class="chart-card-gauge"><h3><i class="fas fa-tachometer-alt"></i> Ocupação Total</h3><div style="position:relative;max-width:280px;margin:0 auto"><canvas id="gaugeChart"></canvas><div id="gaugeCenterLabel" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.5rem;font-weight:800;color:#1A4A5F;"></div></div><div id="gaugeLabel"></div></div>
+    </div>
+
+    <!-- Tabela situação por local -->
+    <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto"><table class="situacao-table"><thead><th>Local</th><th>Total</th><th>Disponíveis</th><th>Reservados</th><th>Contrato</th><th>% Ocup</th></thead><tbody id="situacaoTableBody"></tbody></table></div></div>
+
+    <!-- Tabela de empresas -->
+    <div class="data-section">
+        <div class="table-header" style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+            <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Buscar empresa, local..."></div>
+            <select id="locationFilter" class="filter-select"><option value="">Todos os locais</option></select>
+            <select id="situationFilter" class="filter-select"><option value="">Todas</option><option value="Disponível">Disponível</option><option value="Reservado">Reservado</option><option value="Contrato Assinado">Contrato Assinado</option></select>
+            <select id="sortOrder" class="filter-select"><option value="asc">A-Z</option><option value="desc">Z-A</option></select>
+        </div>
+        <div id="filterTotals" style="background:#f9f1e8; border-radius:16px; padding:0.5rem 1rem; margin-bottom:1rem; display:flex; gap:2rem; flex-wrap:wrap;"></div>
+        <div class="table-wrapper"><table id="salesTable"><thead><th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th></thead><tbody id="tableBody"></tbody></table></div>
+    </div>
+
+    <!-- Mapas oficiais -->
+    <div class="maps-gallery"><h3><i class="fas fa-map"></i> Plantas Oficiais</h3><div class="maps-grid"><div class="map-card-image"><img src="mapa_implantacao_geral.png" onerror="this.style.display='none';"><div class="map-caption">Implantação Geral</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao - Copia.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (todos)</div></div></div></div>
+
+    <div class="footer">© FEMIX 2026 - Sandra Batistella | <span id="lastUpdate">--</span></div>
 </div>
 <div id="toastMessage" class="toast-message"></div>
 
 <script>
-    // ================= CONFIGURAÇÕES =================
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQupd8Nw6l-5dn9JPSFqDDUetYJv7BbX_2lewwcckGriWaCvWphzs9Vtj8FgRa4tKSFM55S4M4xr_hI/pub?output=csv";
-    const ADMIN_USER = "sandra";
-    const ADMIN_PASS = "livia2011";
+    // ========== CONFIGURAÇÃO CORRETA (COM SEU ID REAL) ==========
+    const SPREADSHEET_ID = "1wI06h0qAHNUJazIraSNe3UAK48xnMUjdnr98tY-iTY8";
+    const SHEET_NAME = "Planilha1";  // Se sua aba tiver outro nome, altere aqui (ex: "FEMIX", "Dados")
+    
+    // URL que sempre retorna CSV
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
-    // Capacidades por local (ajuste conforme necessidade real)
+    // Capacidades dos locais (fixas)
     const locationCapacities = {
-        "Tancredão - Ind e Com": 92,
-        "Multiuso - Cdia Trend": 18,
-        "Externo - Motos": 2,
-        "Externo - Semi Novos": 10,
-        "Externo - Concessionárias": 12,
-        "Externo - Agropet": 2,
-        "Externo - Parque de Diversões": 1,
-        "Externo - Caminhões": 5,
-        "Externo - Espaços Privilegiados": 5,
-        "Externo - Alimentação": 11,
-        "Externo - Demais Espaços": 7,
-        "Espaço Conceito": 1,
-        "Externo - Churrasqueiras": 4,
-        "Restaurante": 1
+        "Tancredão - Ind e Com": 92, "Multiuso - Cdia Trend": 18, "Externo - Motos": 2,
+        "Externo - Semi Novos": 10, "Externo - Concessionárias": 12, "Externo - Agropet": 2,
+        "Externo - Parque de Diversões": 1, "Externo - Caminhões": 5, "Externo - Espaços Privilegiados": 5,
+        "Externo - Alimentação": 11, "Externo - Demais Espaços": 7, "Espaço Conceito": 1,
+        "Externo - Churrasqueiras": 4, "Restaurante": 1
     };
     const totalCapacidade = Object.values(locationCapacities).reduce((a,b)=>a+b,0);
 
-    let salesData = [];         // dados atuais (após edições)
-    let isAdmin = false;
-    let currentLocationFilter = null;
-    let currentSituationFilter = null;
-    let currentSearchTerm = "";
-    let currentSortOrder = "asc";
-    let editMode = false;
+    let salesData = [];
+    let currentLocationFilter = null, currentSituationFilter = null, currentSearchTerm = "", currentSortOrder = "asc";
     let pieChart, gaugeChart;
-    let currentEditIdx = null;
 
-    // Helper
-    function showToast(msg, isErr=false) {
-        const toast = document.getElementById('toastMessage');
-        toast.style.backgroundColor = isErr ? '#E67E22' : '#2E7A6E';
-        toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 3000);
+    // Função para converter valor com vírgula/ponto
+    function parseValorBrasil(valorStr) {
+        if (!valorStr) return 0;
+        let cleaned = valorStr.trim().replace(/^["']|["']$/g, '');
+        cleaned = cleaned.replace(/\./g, '');      // remove pontos de milhar
+        cleaned = cleaned.replace(',', '.');       // vírgula decimal vira ponto
+        cleaned = cleaned.replace(/[^0-9.-]/g, '');
+        let num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
     }
 
-    // Carrega CSV da planilha pública
-    async function loadFromSheet() {
+    function deriveSegmento(empresa) {
+        const nome = empresa.toLowerCase();
+        if (nome.includes("móveis") || nome.includes("moveis")) return "Móveis";
+        if (nome.includes("auto") || nome.includes("motos") || nome.includes("veículos")) return "Veículos";
+        if (nome.includes("saúde") || nome.includes("med")) return "Saúde";
+        if (nome.includes("aliment") || nome.includes("restaurante") || nome.includes("churras")) return "Alimentação";
+        if (nome.includes("moda") || nome.includes("joia") || nome.includes("roupa")) return "Moda";
+        return "Diversos";
+    }
+
+    async function loadFromGoogleSheets() {
         try {
-            const response = await fetch(CSV_URL);
+            document.getElementById("syncStatus").innerHTML = "Carregando da planilha...";
+            showToast("Carregando dados automaticamente...");
+            const response = await fetch(CSV_URL, { cache: "no-store" });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const csvText = await response.text();
-            const rows = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
-            if (rows.length < 2) throw new Error("CSV vazio");
-            const headers = rows[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
-            // Mapeamento esperado: empresa, local, quantidade, situacao, valor
-            const data = [];
-            for (let i=1; i<rows.length; i++) {
-                const cols = rows[i].split(',').map(c => c.replace(/^"|"$/g, '').trim());
-                if (cols.length < 5) continue;
-                const empresa = cols[0];
-                let local = cols[1];
-                // Normaliza locais: se "Externo" vira "Externo - Demais Espaços"
-                if (local === "Externo") local = "Externo - Demais Espaços";
-                const quantidade = parseInt(cols[2]) || 1;
-                const situacao = cols[3];
-                const valor = parseFloat(cols[4]) || 0;
-                let segmento = "Diversos";
-                if (empresa.toLowerCase().includes("móveis")) segmento = "Móveis";
-                else if (empresa.toLowerCase().includes("auto") || empresa.toLowerCase().includes("moto")) segmento = "Veículos";
-                else if (empresa.toLowerCase().includes("saúde") || empresa.toLowerCase().includes("med")) segmento = "Saúde";
-                else if (empresa.toLowerCase().includes("aliment")) segmento = "Alimentação";
-                else if (empresa.toLowerCase().includes("moda") || empresa.toLowerCase().includes("joia")) segmento = "Moda";
-                data.push({ empresa, local, quantidade, situacao, valor, segmento });
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
+            if (lines.length < 2) throw new Error("CSV vazio ou formato inválido");
+            
+            // Cabeçalhos
+            const headers = lines[0].split(",").map(h => h.replace(/["']/g, '').trim().toLowerCase());
+            let colEmpresa = headers.findIndex(h => h.includes("empresa") || h === "expositor");
+            let colLocal = headers.findIndex(h => h.includes("local") || h === "espaço");
+            let colQuant = headers.findIndex(h => h.includes("quantidade") || h === "qtde" || h === "qtd");
+            let colSitu = headers.findIndex(h => h.includes("situação") || h.includes("situacao") || h === "status");
+            let colValor = headers.findIndex(h => h.includes("valor") || h === "receita" || h === "total");
+            if (colEmpresa === -1) colEmpresa = 0;
+            if (colLocal === -1) colLocal = 1;
+            if (colQuant === -1) colQuant = 2;
+            if (colSitu === -1) colSitu = 3;
+            if (colValor === -1) colValor = 4;
+            
+            const parsed = [];
+            for (let i = 1; i < lines.length; i++) {
+                // Parse CSV respeitando aspas
+                let row = [];
+                let inQuote = false, current = "";
+                for (let ch of lines[i]) {
+                    if (ch === '"') inQuote = !inQuote;
+                    else if (ch === ',' && !inQuote) { row.push(current.trim()); current = ""; }
+                    else current += ch;
+                }
+                row.push(current.trim());
+                if (row.length < 5) continue;
+                
+                let empresa = row[colEmpresa]?.replace(/^["']|["']$/g, '') || "";
+                if (!empresa) continue;
+                let localRaw = row[colLocal]?.replace(/^["']|["']$/g, '') || "";
+                if (localRaw === "Externo") localRaw = "Externo - Demais Espaços";
+                let quantidade = parseInt(row[colQuant]) || 1;
+                let situacaoRaw = row[colSitu]?.replace(/^["']|["']$/g, '') || "Disponível";
+                let situacao = "Disponível";
+                if (situacaoRaw.toLowerCase().includes("reserv")) situacao = "Reservado";
+                else if (situacaoRaw.toLowerCase().includes("contrato")) situacao = "Contrato Assinado";
+                let valor = parseValorBrasil(row[colValor]);
+                parsed.push({ empresa, local: localRaw, quantidade, situacao, valor, segmento: deriveSegmento(empresa) });
             }
-            if (data.length === 0) throw new Error("Nenhum dado válido");
-            // Salva no localStorage e na variável
-            salesData = data;
-            localStorage.setItem('femix_backup', JSON.stringify(salesData));
-            showToast(`✅ ${salesData.length} empresas carregadas da planilha ao vivo!`);
+            if (parsed.length === 0) throw new Error("Nenhum dado válido encontrado");
+            salesData = parsed;
+            document.getElementById("lastUpdate").innerHTML = `Última atualização: ${new Date().toLocaleString()}`;
+            document.getElementById("syncStatus").innerHTML = "✅ Automático (Google Sheets)";
+            showToast(`✅ ${salesData.length} empresas carregadas!`);
             return true;
-        } catch (err) {
-            console.error(err);
-            // Fallback: tenta carregar do localStorage
-            const local = localStorage.getItem('femix_backup');
-            if (local) {
-                salesData = JSON.parse(local);
-                showToast(`⚠️ Erro ao carregar planilha. Usando dados salvos localmente (${salesData.length} registros).`, true);
-                return true;
-            } else {
-                showToast("❌ Falha crítica: não foi possível carregar dados. Verifique a URL da planilha.", true);
-                return false;
-            }
+        } catch(e) {
+            console.error("Erro ao carregar:", e);
+            document.getElementById("syncStatus").innerHTML = "⚠️ Erro na conexão - usando fallback";
+            showToast("Falha ao carregar planilha. Usando dados de exemplo.", true);
+            loadFallbackData();
+            return false;
         }
     }
 
-    // Filtros
+    function loadFallbackData() {
+        const raw = [
+            ["Crecerto","Tancredão - Ind e Com",2,"Reservado",13184],["Detalhes Móveis","Tancredão - Ind e Com",2,"Reservado",18952],
+            ["Consórcio Itá","Tancredão - Ind e Com",2,"Reservado",9888],["Sicredi","Tancredão - Ind e Com",2,"Reservado",9888],
+            ["Unimed","Tancredão - Ind e Com",2,"Reservado",9888],["BTM Brindes","Tancredão - Ind e Com",2,"Contrato Assinado",9888]
+        ];
+        salesData = raw.map(r => ({ empresa: r[0], local: r[1], quantidade: r[2], situacao: r[3], valor: r[4], segmento: deriveSegmento(r[0]) }));
+        document.getElementById("lastUpdate").innerHTML = `Dados de exemplo (fallback) - verifique sua planilha`;
+    }
+
+    // Funções de filtro, tabela, gráficos
     function getFilteredData() {
         let filtered = salesData.filter(i => {
             if (currentLocationFilter && i.local !== currentLocationFilter) return false;
@@ -197,33 +252,32 @@
             return true;
         });
         filtered.sort((a,b) => {
-            const nameA = a.empresa.toLowerCase();
-            const nameB = b.empresa.toLowerCase();
-            return currentSortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            const na = a.empresa.toLowerCase(), nb = b.empresa.toLowerCase();
+            return currentSortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
         });
         return filtered;
     }
 
     function updateFilterTotals() {
         const filtered = getFilteredData();
-        const totalQuant = filtered.reduce((acc,i) => acc + (i.quantidade||1), 0);
-        const totalValor = filtered.reduce((acc,i) => acc + i.valor, 0);
-        document.getElementById('filterTotals').innerHTML = `<span>Total de estandes: ${totalQuant}</span><span>Valor total: R$ ${totalValor.toLocaleString('pt-BR')}</span>`;
+        const totalQuant = filtered.reduce((s,i)=>s+(i.quantidade||1),0);
+        const totalValor = filtered.reduce((s,i)=>s+i.valor,0);
+        document.getElementById("filterTotals").innerHTML = `<span>Total de estandes: ${totalQuant}</span><span>Valor total: R$ ${totalValor.toLocaleString('pt-BR')}</span>`;
     }
 
     function updateKPIs() {
         const totalRev = salesData.reduce((s,i)=>s+i.valor,0);
-        const totalEmpresas = salesData.length;
-        const ticketMedio = totalEmpresas ? totalRev / totalEmpresas : 0;
-        const totalOcup = salesData.reduce((acc,i)=>acc+(i.quantidade||1),0);
-        const ocupPercent = Math.min(100, (totalOcup / totalCapacidade) * 100);
-        const valorOcupado = salesData.filter(i => i.situacao === "Reservado" || i.situacao === "Contrato Assinado").reduce((acc,i)=>acc+i.valor,0);
+        const totalEmp = salesData.length;
+        const ticket = totalEmp ? totalRev/totalEmp : 0;
+        const totalOcup = salesData.reduce((s,i)=>s+(i.quantidade||1),0);
+        const ocupPct = Math.min(100, (totalOcup/totalCapacidade)*100);
+        const ocupValor = salesData.filter(i=>i.situacao!=="Disponível").reduce((s,i)=>s+i.valor,0);
         document.getElementById("totalRevenue").innerHTML = `R$ ${totalRev.toLocaleString('pt-BR')}`;
-        document.getElementById("occupiedRevenue").innerHTML = `R$ ${valorOcupado.toLocaleString('pt-BR')}`;
-        document.getElementById("totalCompanies").innerHTML = totalEmpresas;
-        document.getElementById("avgTicket").innerHTML = `R$ ${Math.round(ticketMedio).toLocaleString('pt-BR')}`;
-        document.getElementById("occupancyRate").innerHTML = `${Math.round(ocupPercent)}%`;
-        return ocupPercent;
+        document.getElementById("occupiedRevenue").innerHTML = `R$ ${ocupValor.toLocaleString('pt-BR')}`;
+        document.getElementById("totalCompanies").innerHTML = totalEmp;
+        document.getElementById("avgTicket").innerHTML = `R$ ${Math.round(ticket).toLocaleString('pt-BR')}`;
+        document.getElementById("occupancyRate").innerHTML = `${Math.round(ocupPct)}%`;
+        return ocupPct;
     }
 
     function renderMap() {
@@ -235,17 +289,8 @@
             else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
             stats[i.local].receita += i.valor;
         });
-        const grid = document.getElementById("mapGrid");
+        let grid = document.getElementById("mapGrid");
         grid.innerHTML = "";
-        const iconMap = {
-            "Tancredão - Ind e Com": "fa-industry", "Multiuso - Cdia Trend": "fa-store",
-            "Externo - Motos": "fa-motorcycle", "Externo - Semi Novos": "fa-car",
-            "Externo - Concessionárias": "fa-car-side", "Externo - Agropet": "fa-paw",
-            "Externo - Parque de Diversões": "fa-tree", "Externo - Caminhões": "fa-truck",
-            "Externo - Espaços Privilegiados": "fa-crown", "Externo - Alimentação": "fa-utensils",
-            "Externo - Demais Espaços": "fa-store", "Espaço Conceito": "fa-star",
-            "Externo - Churrasqueiras": "fa-fire", "Restaurante": "fa-utensil-spoon"
-        };
         for (let [local, data] of Object.entries(stats)) {
             let ocupReal = data.reservado + data.contrato;
             let perc = Math.min(100, (ocupReal / data.total) * 100);
@@ -254,16 +299,15 @@
             card.className = `map-location ${currentLocationFilter === local ? 'selected' : ''}`;
             card.onclick = () => {
                 currentLocationFilter = currentLocationFilter === local ? null : local;
-                const locSelect = document.getElementById('locationFilter');
-                if (locSelect) locSelect.value = currentLocationFilter || '';
+                document.getElementById('locationFilter').value = currentLocationFilter || '';
                 renderMap();
                 renderTable();
                 updateFilterTotals();
             };
-            let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes além da capacidade">⚠️</span>` : '';
+            let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes">⚠️</span>` : '';
             card.innerHTML = `
-                <div class="location-header"><div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div></div>
-                <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita/1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div>
+                <div class="location-header"><div class="location-name"><i class="fas fa-map-marker"></i> ${local} ${warning}</div></div>
+                <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div>
                 <div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div>
                 <div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span></div>
             `;
@@ -290,82 +334,132 @@
     }
 
     function updatePieChart() {
-        let reservado=0, contrato=0;
-        salesData.forEach(i => { let q=i.quantidade||1; if(i.situacao==="Reservado") reservado+=q; else if(i.situacao==="Contrato Assinado") contrato+=q; });
-        let totalOcup = reservado+contrato;
-        let disponivel = Math.max(0, totalCapacidade - totalOcup);
-        const data = [disponivel, reservado, contrato];
-        const labels = ["Disponível", "Reservado", "Contrato Assinado"];
-        const cores = ["#aaa", "#FFC107", "#2E7A6E"];
-        if (pieChart) { pieChart.data.datasets[0].data = data; pieChart.update(); }
-        else {
+        let reservado = 0, contrato = 0;
+        salesData.forEach(i => { let q = i.quantidade || 1; if (i.situacao === "Reservado") reservado += q; else if (i.situacao === "Contrato Assinado") contrato += q; });
+        let disponivel = Math.max(0, totalCapacidade - (reservado+contrato));
+        let valores = [disponivel, reservado, contrato];
+        let labels = ["Disponível", "Reservado", "Contrato Assinado"];
+        let cores = ["#aaa", "#FFC107", "#2E7A6E"];
+        let total = valores.reduce((a,b)=>a+b,0);
+        if (pieChart) {
+            pieChart.data.datasets[0].data = valores;
+            pieChart.update();
+        } else {
             const ctx = document.getElementById('piePercentChart').getContext('2d');
-            pieChart = new Chart(ctx, { type:'pie', data:{ labels, datasets:[{ data, backgroundColor:cores, borderWidth:0 }] }, options:{ responsive:true, plugins:{ tooltip:{ callbacks:{ label:ctx=>{ let val=ctx.raw; let pct=((val/(disponivel+totalOcup))*100).toFixed(1); return `${ctx.label}: ${val} estandes (${pct}%)`; } } }, legend:{ display:false } } } });
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: { labels, datasets: [{ data: valores, backgroundColor: cores, borderWidth: 0 }] },
+                options: { responsive: true, plugins: { tooltip: { callbacks: { label: ctx => { let val = ctx.raw; let pct = ((val/total)*100).toFixed(1); return `${ctx.label}: ${val} estandes (${pct}%)`; } } }, legend: { display: false } } }
+            });
         }
-        const legendDiv = document.getElementById('piePercentLegend');
+        let legendDiv = document.getElementById('piePercentLegend');
         legendDiv.innerHTML = "";
-        for(let i=0;i<labels.length;i++) { let pct = ((data[i]/(disponivel+totalOcup))*100).toFixed(1); legendDiv.innerHTML += `<span style="display:inline-block; margin:0 8px;"><span style="background:${cores[i]}; width:12px; height:12px; display:inline-block; border-radius:2px;"></span> ${labels[i]}: ${data[i]} (${pct}%)</span>`; }
+        for (let i=0; i<labels.length; i++) {
+            let pct = total ? ((valores[i]/total)*100).toFixed(1) : 0;
+            legendDiv.innerHTML += `<span style="display:inline-block; margin:0 8px;"><span style="background:${cores[i]}; width:12px; height:12px; display:inline-block; border-radius:2px;"></span> ${labels[i]}: ${valores[i]} (${pct}%)</span>`;
+        }
     }
 
-    function updateGauge(percent) {
+    function updateGauge(ocupPct) {
         const ctx = document.getElementById('gaugeChart').getContext('2d');
-        const value = Math.min(100, percent);
         if (gaugeChart) gaugeChart.destroy();
-        gaugeChart = new Chart(ctx, { type:'doughnut', data:{ datasets:[{ data:[value, 100-value], backgroundColor:['#2E7A6E','#e0d5c8'], borderWidth:0, circumference:180, rotation:270, cutout:'70%' }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ tooltip:{ enabled:false }, legend:{ display:false } } } });
-        document.getElementById('gaugeLabel').innerText = `${Math.round(value)}% de ocupação total`;
-        document.getElementById('gaugeCenterLabel').innerText = `${Math.round(value)}%`;
+        gaugeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { datasets: [{ data: [ocupPct, 100-ocupPct], backgroundColor: ['#2E7A6E', '#e0d5c8'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '70%' }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { enabled: false }, legend: { display: false } } }
+        });
+        document.getElementById('gaugeLabel').innerText = `${Math.round(ocupPct)}% de ocupação total`;
+        document.getElementById('gaugeCenterLabel').innerText = `${Math.round(ocupPct)}%`;
     }
 
     function renderTable() {
-        const filtered = getFilteredData();
-        const tbody = document.getElementById("tableBody");
-        if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado</td></tr>`; updateFilterTotals(); return; }
-        tbody.innerHTML = filtered.map((item, idx) => {
-            const originalIdx = salesData.findIndex(d => d.empresa === item.empresa && d.local === item.local && d.quantidade === item.quantidade && d.valor === item.valor && d.segmento === item.segmento && d.situacao === item.situacao);
-            const safeIdx = originalIdx !== -1 ? originalIdx : idx;
-            return `<tr data-original-idx="${safeIdx}">
-                <td class="${isAdmin ? 'editable-cell' : ''}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td>
-                <td class="${isAdmin ? 'editable-cell' : ''}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td>
-                <td class="${isAdmin ? 'editable-cell' : ''}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td>
-                <td class="${isAdmin ? 'editable-cell' : ''}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td>
-                <td class="${isAdmin ? 'editable-cell' : ''}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td>
-                <td>${isAdmin ? `<select class="status-select" data-original-idx="${safeIdx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td>
-                <td>${isAdmin ? `<button class="btn-edit" data-original-idx="${safeIdx}" style="background:none; border:none; color:#3498DB; cursor:pointer;"><i class="fas fa-edit"></i></button> <button class="btn-delete" data-original-idx="${safeIdx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td>
-            </tr>`;
-        }).join('');
-        if (isAdmin) {
-            attachEditEvents(); attachDeleteEvents(); attachStatusEvents();
-            document.querySelectorAll('.btn-edit').forEach(btn => btn.onclick = () => openEditModal(parseInt(btn.dataset.originalIdx)));
-        }
+        let filtered = getFilteredData();
+        let tbody = document.getElementById("tableBody");
+        if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="6">Nenhum resultado</td></tr>`; updateFilterTotals(); return; }
+        tbody.innerHTML = filtered.map(item => `
+            <tr>
+                <td>${escapeHtml(item.empresa)}</td>
+                <td>${escapeHtml(item.local)}</td>
+                <td>${item.quantidade}</td>
+                <td>R$ ${item.valor.toLocaleString('pt-BR')}</td>
+                <td>${escapeHtml(item.segmento)}</td>
+                <td><span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span></td>
+            </tr>
+        `).join('');
         updateFilterTotals();
     }
+
     function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
-    function attachEditEvents() { document.querySelectorAll('.editable-cell').forEach(cell => cell.onclick = (e) => { if(!isAdmin) return; const row = cell.closest('tr'); if(!row) return; const idx = parseInt(row.dataset.originalIdx); const field = cell.dataset.field; const cur = cell.dataset.value; makeEditable(cell, idx, field, cur); }); }
-    function attachDeleteEvents() { document.querySelectorAll('.btn-delete').forEach(btn => btn.onclick = async () => { let idx = parseInt(btn.dataset.originalIdx); salesData.splice(idx,1); localStorage.setItem('femix_backup', JSON.stringify(salesData)); refreshAll(); showToast("Empresa removida!"); }); }
-    function attachStatusEvents() { document.querySelectorAll('.status-select').forEach(sel => sel.onchange = async () => { let idx = parseInt(sel.dataset.originalIdx); salesData[idx].situacao = sel.value; localStorage.setItem('femix_backup', JSON.stringify(salesData)); refreshAll(); showToast("Situação atualizada!"); }); }
-    function makeEditable(cell, idx, field, cur) { if(editMode) return; editMode=true; const input=document.createElement('input'); input.type=(field==='valor'||field==='quantidade')?'number':'text'; input.value=cur; cell.innerHTML=''; cell.appendChild(input); input.focus(); const save=async()=>{ let val=input.value; if(field==='valor') val=parseFloat(val)||0; if(field==='quantidade') val=parseInt(val)||1; salesData[idx][field]=val; localStorage.setItem('femix_backup', JSON.stringify(salesData)); editMode=false; refreshAll(); showToast("Atualizado!"); }; const cancel=()=>{ editMode=false; refreshAll(); }; input.onblur=save; input.onkeypress=e=>{ if(e.key==='Enter') save(); if(e.key==='Escape') cancel(); }; }
-    function openEditModal(idx) { currentEditIdx=idx; const e=salesData[idx]; document.getElementById('editEmpresa').value=e.empresa; const locSelect=document.getElementById('editLocal'); locSelect.innerHTML=''; Object.keys(locationCapacities).sort().forEach(l=>{ const opt=document.createElement('option'); opt.value=l; opt.textContent=l; if(l===e.local) opt.selected=true; locSelect.appendChild(opt); }); document.getElementById('editQuantidade').value=e.quantidade; document.getElementById('editValor').value=e.valor; document.getElementById('editSegmento').value=e.segmento; document.getElementById('editSituacao').value=e.situacao; document.getElementById('editModal').style.display='flex'; }
-    function closeEditModal() { document.getElementById('editModal').style.display='none'; currentEditIdx=null; }
-    async function saveEditModal() { if(currentEditIdx===null) return; salesData[currentEditIdx]={ empresa:document.getElementById('editEmpresa').value, local:document.getElementById('editLocal').value, quantidade:parseInt(document.getElementById('editQuantidade').value)||1, valor:parseFloat(document.getElementById('editValor').value)||0, segmento:document.getElementById('editSegmento').value, situacao:document.getElementById('editSituacao').value }; localStorage.setItem('femix_backup', JSON.stringify(salesData)); closeEditModal(); refreshAll(); showToast("Empresa atualizada!"); }
-    function refreshAll() { if(editMode) return; const occ = updateKPIs(); renderMap(); renderSituacaoTable(); renderTable(); updatePieChart(); updateGauge(occ); }
-    function exportToExcel() { const wsData=[["Empresa","Local","Quantidade","Valor Total (R$)","Segmento","Situação"]]; salesData.forEach(i=>wsData.push([i.empresa,i.local,i.quantidade,i.valor,i.segmento,i.situacao])); const ws=XLSX.utils.aoa_to_sheet(wsData); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"FEMIX_Vendas"); XLSX.writeFile(wb,`FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`); showToast("Excel exportado!"); }
-    async function exportToPDF() { showToast("Gerando PDF..."); const el=document.getElementById("dashboardToExport"); try{ const canvas=await html2canvas(el,{scale:2,useCORS:true}); const imgData=canvas.toDataURL('image/png'); const {jsPDF}=window.jspdf; const pdf=new jsPDF('p','mm','a4'); const imgWidth=210; const imgHeight=(canvas.height*imgWidth)/canvas.width; let heightLeft=imgHeight; let pos=0; pdf.addImage(imgData,'PNG',0,pos,imgWidth,imgHeight); heightLeft-=297; while(heightLeft>0){ pos=heightLeft-imgHeight; pdf.addPage(); pdf.addImage(imgData,'PNG',0,pos,imgWidth,imgHeight); heightLeft-=297; } pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`); showToast("PDF gerado!"); } catch(e){ showToast("Erro PDF",true); } }
-    async function addSampleCompany() { const nova={ empresa:`Nova ${salesData.length+1}`, local:"Externo - Demais Espaços", quantidade:1, situacao:"Disponível", valor:5000, segmento:"Diversos" }; salesData.push(nova); localStorage.setItem('femix_backup', JSON.stringify(salesData)); refreshAll(); showToast("Empresa adicionada!"); }
-    async function resetData() { if(confirm("Resetar dados? Perderá edições não salvas na nuvem.")) await loadFromSheet(); refreshAll(); }
 
-    function openAdminModal() { document.getElementById('adminModal').classList.add('active'); }
-    function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
-    function doAdminLogin() { const user=document.getElementById('adminUser').value.trim().toLowerCase(); const pass=document.getElementById('adminPass').value; if(user===ADMIN_USER && pass===ADMIN_PASS){ isAdmin=true; sessionStorage.setItem('femix_admin','true'); closeAdminModal(); document.getElementById('modeBadge').innerHTML='<i class="fas fa-user-shield"></i> Modo Administrador'; document.getElementById('modeStatus').innerHTML='Administradora - Edição Liberada'; document.getElementById('editHint').innerHTML='<i class="fas fa-edit"></i> Clique para editar'; document.getElementById('actionsHeader').innerHTML='Ações'; document.getElementById('actionButtons').innerHTML=`<button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button><button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button><button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Local</button><button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Recarregar Planilha</button>`; document.getElementById('addSampleBtn')?.addEventListener('click',addSampleCompany); document.getElementById('saveNowBtn')?.addEventListener('click',()=>{ localStorage.setItem('femix_backup', JSON.stringify(salesData)); showToast("Dados salvos localmente!"); }); document.getElementById('resetDataBtn')?.addEventListener('click',resetData); document.getElementById('exportExcelBtn')?.addEventListener('click',exportToExcel); document.getElementById('exportPdfBtn')?.addEventListener('click',exportToPDF); refreshAll(); showToast("Modo administrador ativado!"); } else { document.getElementById('adminLoginError').style.display='block'; setTimeout(()=>document.getElementById('adminLoginError').style.display='none',3000); } }
+    function refreshAll() {
+        const ocup = updateKPIs();
+        renderMap();
+        renderSituacaoTable();
+        renderTable();
+        updatePieChart();
+        updateGauge(ocup);
+    }
 
-    function populateFilters() { const locSel=document.getElementById('locationFilter'); locSel.innerHTML='<option value="">Todos os locais</option>'; Object.keys(locationCapacities).sort().forEach(l=>{ const opt=document.createElement('option'); opt.value=l; opt.textContent=l; locSel.appendChild(opt); }); locSel.value=currentLocationFilter||''; locSel.onchange=e=>{ currentLocationFilter=e.target.value||null; renderMap(); renderTable(); }; document.getElementById('situationFilter').onchange=e=>{ currentSituationFilter=e.target.value||null; renderTable(); }; document.getElementById('sortOrder').onchange=e=>{ currentSortOrder=e.target.value; renderTable(); }; document.getElementById('searchInput').oninput=e=>{ currentSearchTerm=e.target.value; renderTable(); }; }
+    async function exportToPDF() {
+        showToast("Gerando PDF...");
+        let el = document.getElementById("dashboardToExport");
+        try {
+            let canvas = await html2canvas(el, { scale: 2, useCORS: true });
+            let imgData = canvas.toDataURL('image/png');
+            let { jsPDF } = window.jspdf;
+            let pdf = new jsPDF('p', 'mm', 'a4');
+            let imgWidth = 210;
+            let imgHeight = (canvas.height * imgWidth) / canvas.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`);
+            showToast("PDF gerado!");
+        } catch(e) { showToast("Erro ao gerar PDF", true); }
+    }
 
-    (async function init() { await loadFromSheet(); populateFilters(); if(sessionStorage.getItem('femix_admin')==='true'){ isAdmin=true; document.getElementById('modeBadge').innerHTML='<i class="fas fa-user-shield"></i> Modo Administrador'; document.getElementById('modeStatus').innerHTML='Administradora - Edição Liberada'; document.getElementById('editHint').innerHTML='<i class="fas fa-edit"></i> Clique para editar'; document.getElementById('actionsHeader').innerHTML='Ações'; document.getElementById('actionButtons').innerHTML=`<button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button><button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button><button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Local</button><button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Recarregar Planilha</button>`; document.getElementById('addSampleBtn')?.addEventListener('click',addSampleCompany); document.getElementById('saveNowBtn')?.addEventListener('click',()=>{ localStorage.setItem('femix_backup', JSON.stringify(salesData)); showToast("Dados salvos localmente!"); }); document.getElementById('resetDataBtn')?.addEventListener('click',resetData); document.getElementById('exportExcelBtn')?.addEventListener('click',exportToExcel); document.getElementById('exportPdfBtn')?.addEventListener('click',exportToPDF); } refreshAll(); })();
+    function exportToExcel() {
+        let wsData = [["Empresa", "Local", "Quantidade", "Valor (R$)", "Segmento", "Situação"]];
+        salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao]));
+        let ws = XLSX.utils.aoa_to_sheet(wsData);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas");
+        XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`);
+        showToast("Exportado Excel!");
+    }
 
-    document.getElementById('openAdminBtn').addEventListener('click', openAdminModal);
-    document.getElementById('closeModalBtn').addEventListener('click', closeAdminModal);
-    document.getElementById('confirmLoginBtn').addEventListener('click', doAdminLogin);
-    document.getElementById('saveEditBtn').addEventListener('click', saveEditModal);
-    document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+    function showToast(msg, isErr=false) {
+        const toast = document.getElementById('toastMessage');
+        toast.style.backgroundColor = isErr ? '#E67E22' : '#2E7A6E';
+        toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    function populateFilters() {
+        const locSelect = document.getElementById('locationFilter');
+        locSelect.innerHTML = '<option value="">Todos os locais</option>';
+        Object.keys(locationCapacities).sort().forEach(loc => {
+            let opt = document.createElement('option');
+            opt.value = loc;
+            opt.textContent = loc;
+            locSelect.appendChild(opt);
+        });
+        locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); });
+        document.getElementById('situationFilter').addEventListener('change', (e) => { currentSituationFilter = e.target.value || null; renderTable(); });
+        document.getElementById('sortOrder').addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTable(); });
+        document.getElementById('searchInput').addEventListener('input', (e) => { currentSearchTerm = e.target.value; renderTable(); });
+    }
+
+    // Eventos
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
+    document.getElementById('refreshBtn').addEventListener('click', async () => { await loadFromGoogleSheets(); refreshAll(); });
+
+    // Inicialização
+    (async () => {
+        await loadFromGoogleSheets();
+        populateFilters();
+        refreshAll();
+    })();
 </script>
 </body>
 </html>
