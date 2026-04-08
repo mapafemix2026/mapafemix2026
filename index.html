@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEMIX 2026 | Dashboard Oficial</title>
+    <title>FEMIX 2026 | Dashboard Automático</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
@@ -28,7 +28,6 @@
         .btn-primary { background: #FFC107; color: #0B2B40; }
         .btn-pdf { background: #c0392b; color: white; }
         .btn-info { background: #3498DB; color: white; }
-        .btn-success { background: #2E7A6E; color: white; }
         .search-box { display: flex; align-items: center; background: #f7f3ec; border-radius: 40px; padding: 6px 18px; gap: 8px; }
         .search-box input { border: none; background: transparent; outline: none; padding: 6px 0; width: 200px; }
         .filter-select { padding: 6px 12px; border-radius: 40px; border: 1px solid #e8dccc; background: #f7f3ec; font-family: 'Inter', sans-serif; font-size: 0.8rem; cursor: pointer; }
@@ -71,12 +70,12 @@
 <div class="dashboard-container" id="dashboardToExport">
     <div class="femix-header">
         <div class="logo-area"><div class="logo-simbolo">F</div><div class="logo-texto"><h2>FEMIX 2026</h2><p>Feira Multissetorial de Concórdia</p></div></div>
-        <div class="mode-badge"><i class="fas fa-file-excel"></i> Google Sheets (XLSX)</div>
+        <div class="mode-badge"><i class="fas fa-cloud-download-alt"></i> Automático (Google Sheets)</div>
     </div>
 
     <div class="status-bar">
         <div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span class="badge badge-public" id="syncStatus">Carregando planilha...</span></div>
-        <div><i class="fas fa-info-circle"></i> Dados carregados via XLSX (Excel)</div>
+        <div><i class="fas fa-info-circle"></i> Dados carregados automaticamente via API</div>
     </div>
 
     <div class="action-buttons">
@@ -85,10 +84,8 @@
         <button class="btn btn-info" id="refreshBtn"><i class="fas fa-sync-alt"></i> Recarregar Planilha</button>
     </div>
 
-    <!-- Mapa interativo -->
     <div class="map-container"><h3><i class="fas fa-map-marked-alt"></i> Mapa Interativo</h3><div class="map-grid" id="mapGrid"></div><p style="font-size:0.7rem; text-align:center;">Clique em um local para filtrar a tabela</p></div>
 
-    <!-- KPIs -->
     <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-title">💰 RECEITA TOTAL</div><div class="kpi-value" id="totalRevenue">R$ 0</div></div>
         <div class="kpi-card"><div class="kpi-title">💵 VALOR OCUPADO</div><div class="kpi-value" id="occupiedRevenue">R$ 0</div></div>
@@ -97,16 +94,13 @@
         <div class="kpi-card"><div class="kpi-title">📊 OCUPAÇÃO</div><div class="kpi-value" id="occupancyRate">0%</div></div>
     </div>
 
-    <!-- Gráficos -->
     <div class="charts-row">
         <div class="chart-card-pie"><h3><i class="fas fa-chart-pie"></i> Proporção por Situação</h3><div style="max-width:260px;margin:0 auto"><canvas id="piePercentChart"></canvas></div><div id="piePercentLegend" style="margin-top:1rem;text-align:center;font-size:0.75rem;"></div></div>
         <div class="chart-card-gauge"><h3><i class="fas fa-tachometer-alt"></i> Ocupação Total</h3><div style="position:relative;max-width:280px;margin:0 auto"><canvas id="gaugeChart"></canvas><div id="gaugeCenterLabel" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.5rem;font-weight:800;color:#1A4A5F;"></div></div><div id="gaugeLabel"></div></div>
     </div>
 
-    <!-- Tabela situação por local -->
     <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto"><table class="situacao-table"><thead><th>Local</th><th>Total</th><th>Disponíveis</th><th>Reservados</th><th>Contrato</th><th>% Ocup</th></thead><tbody id="situacaoTableBody"></tbody></table></div></div>
 
-    <!-- Tabela de empresas -->
     <div class="data-section">
         <div class="table-header" style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
             <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Buscar empresa, local..."></div>
@@ -118,7 +112,6 @@
         <div class="table-wrapper"><table id="salesTable"><thead><th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th></thead><tbody id="tableBody"></tbody></table></div>
     </div>
 
-    <!-- Mapas oficiais -->
     <div class="maps-gallery"><h3><i class="fas fa-map"></i> Plantas Oficiais</h3><div class="maps-grid"><div class="map-card-image"><img src="mapa_implantacao_geral.png" onerror="this.style.display='none';"><div class="map-caption">Implantação Geral</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao - Copia.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (todos)</div></div></div></div>
 
     <div class="footer">© FEMIX 2026 - Sandra Batistella | <span id="lastUpdate">--</span></div>
@@ -126,27 +119,14 @@
 <div id="toastMessage" class="toast-message"></div>
 
 <script>
-    // ========== CONFIGURAÇÃO ==========
-    // URL para download no formato XLSX (Excel)
-    const XLSX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQupd8Nw6l-5dn9JPSFqDDUetYJv7BbX_2lewwcckGriWaCvWphzs9Vtj8FgRa4tKSFM55S4M4xr_hI/pub?output=xlsx";
+    // ========== CONFIGURAÇÃO ATUALIZADA COM SUA PLANILHA ==========
+    const SPREADSHEET_ID = "1nqrPlvcYOcb7xMJNN6zl0Hi6GNlUVwYKJ0XgD9SU7s8";
+    const SHEET_NAME = "Planilha1";  // Altere se o nome da sua aba for diferente (ex: "Sheet1", "Dados")
     
-    // Fallback: dados locais de exemplo
-    const FALLBACK_DATA = [
-        ["Tancredão - Ind e Com", "Crecerto", 2, "Reservado", 13184],
-        ["Tancredão - Ind e Com", "Detalhes Móveis", 2, "Reservado", 18952],
-        ["Tancredão - Ind e Com", "Consórcio Itá", 2, "Reservado", 9888],
-        ["Tancredão - Ind e Com", "Fischer Móveis", 2, "Reservado", 9888],
-        ["Tancredão - Ind e Com", "Sicredi", 2, "Reservado", 9888],
-        ["Tancredão - Ind e Com", "Unimed", 2, "Reservado", 9888],
-        ["Tancredão - Ind e Com", "BTM Brindes", 2, "Contrato Assinado", 9888],
-        ["Multiuso - Cdia Trend", "Aileen Semi Jóias", 1, "Reservado", 5285],
-        ["Multiuso - Cdia Trend", "Art Couros", 1, "Reservado", 5285],
-        ["Externo - Concessionárias", "Ledir Automóveis", 1, "Reservado", 0],
-        ["Externo - Espaços Privilegiados", "Marinho Tramados", 1, "Reservado", 6750],
-        ["Externo - Demais Espaços", "Balbinot Empreiteira Ltda", 1, "Reservado", 1620]
-    ];
+    // URL que sempre retorna CSV
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
-    // Capacidades dos locais
+    // Capacidades dos locais (fixas)
     const locationCapacities = {
         "Tancredão - Ind e Com": 92, "Multiuso - Cdia Trend": 18, "Externo - Motos": 2,
         "Externo - Semi Novos": 10, "Externo - Concessionárias": 12, "Externo - Agropet": 2,
@@ -160,6 +140,16 @@
     let currentLocationFilter = null, currentSituationFilter = null, currentSearchTerm = "", currentSortOrder = "asc";
     let pieChart, gaugeChart;
 
+    function parseValorBrasil(valorStr) {
+        if (!valorStr) return 0;
+        let cleaned = valorStr.toString().trim().replace(/^["']|["']$/g, '');
+        cleaned = cleaned.replace(/\./g, '');
+        cleaned = cleaned.replace(',', '.');
+        cleaned = cleaned.replace(/[^0-9.-]/g, '');
+        let num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+    }
+
     function deriveSegmento(empresa) {
         const nome = empresa.toLowerCase();
         if (nome.includes("móveis") || nome.includes("moveis")) return "Móveis";
@@ -170,118 +160,77 @@
         return "Diversos";
     }
 
-    function parseValorBrasil(valor) {
-        if (typeof valor === 'number') return valor;
-        if (!valor) return 0;
-        let str = String(valor).trim();
-        // Remove R$ e espaços
-        str = str.replace(/[R$\s]/g, '');
-        // Troca vírgula por ponto (decimal)
-        str = str.replace(',', '.');
-        // Remove pontos de milhar (mantém apenas o último ponto se existir)
-        const parts = str.split('.');
-        if (parts.length > 2) {
-            str = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
-        }
-        const num = parseFloat(str);
-        return isNaN(num) ? 0 : num;
-    }
-
     async function loadFromGoogleSheets() {
         try {
-            document.getElementById("syncStatus").innerHTML = "Carregando planilha...";
-            showToast("Baixando dados da planilha...");
-            
-            const response = await fetch(XLSX_URL + "?t=" + Date.now(), { cache: "no-store" });
+            document.getElementById("syncStatus").innerHTML = "Carregando da planilha...";
+            showToast("Carregando dados automaticamente...");
+            const response = await fetch(CSV_URL, { cache: "no-store" });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const csvText = await response.text();
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
+            if (lines.length < 2) throw new Error("CSV vazio ou formato inválido");
             
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            
-            // Pega a primeira aba da planilha
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            
-            if (!jsonData || jsonData.length < 2) {
-                throw new Error("Planilha vazia");
-            }
-            
-            const headers = jsonData[0].map(h => String(h || "").toLowerCase().trim());
-            
-            // Mapeamento flexível das colunas
-            const idxLocal = headers.findIndex(h => h.includes('local') || h === 'espaço');
-            const idxEmpresa = headers.findIndex(h => h.includes('empresa') || h === 'expositor');
-            const idxQtd = headers.findIndex(h => h.includes('quantidade') || h === 'qtde' || h === 'qtd');
-            const idxSituacao = headers.findIndex(h => h.includes('situação') || h.includes('situacao') || h === 'status');
-            const idxValor = headers.findIndex(h => h.includes('valor') || h === 'receita');
+            const headers = lines[0].split(",").map(h => h.replace(/["']/g, '').trim().toLowerCase());
+            let colEmpresa = headers.findIndex(h => h.includes("empresa") || h === "expositor");
+            let colLocal = headers.findIndex(h => h.includes("local") || h === "espaço");
+            let colQuant = headers.findIndex(h => h.includes("quantidade") || h === "qtde" || h === "qtd");
+            let colSitu = headers.findIndex(h => h.includes("situação") || h.includes("situacao") || h === "status");
+            let colValor = headers.findIndex(h => h.includes("valor") || h === "receita" || h === "total");
+            if (colEmpresa === -1) colEmpresa = 0;
+            if (colLocal === -1) colLocal = 1;
+            if (colQuant === -1) colQuant = 2;
+            if (colSitu === -1) colSitu = 3;
+            if (colValor === -1) colValor = 4;
             
             const parsed = [];
-            
-            for (let i = 1; i < jsonData.length; i++) {
-                const row = jsonData[i];
-                if (!row || row.length === 0) continue;
+            for (let i = 1; i < lines.length; i++) {
+                let row = [];
+                let inQuote = false, current = "";
+                for (let ch of lines[i]) {
+                    if (ch === '"') inQuote = !inQuote;
+                    else if (ch === ',' && !inQuote) { row.push(current.trim()); current = ""; }
+                    else current += ch;
+                }
+                row.push(current.trim());
+                if (row.length < 5) continue;
                 
-                const empresa = idxEmpresa !== -1 ? String(row[idxEmpresa] || "").trim() : (row[1] ? String(row[1]).trim() : "");
+                let empresa = row[colEmpresa]?.replace(/^["']|["']$/g, '') || "";
                 if (!empresa) continue;
-                
-                const localRaw = idxLocal !== -1 ? String(row[idxLocal] || "").trim() : (row[0] ? String(row[0]).trim() : "");
-                let local = localRaw === "Externo" ? "Externo - Demais Espaços" : localRaw;
-                
-                const qtdStr = idxQtd !== -1 ? String(row[idxQtd] || "1").trim() : (row[2] ? String(row[2]).trim() : "1");
-                let quantidade = parseInt(qtdStr) || 1;
-                
-                const situacaoRaw = idxSituacao !== -1 ? String(row[idxSituacao] || "Disponível").trim() : (row[3] ? String(row[3]).trim() : "Disponível");
+                let localRaw = row[colLocal]?.replace(/^["']|["']$/g, '') || "";
+                if (localRaw === "Externo") localRaw = "Externo - Demais Espaços";
+                let quantidade = parseInt(row[colQuant]) || 1;
+                let situacaoRaw = row[colSitu]?.replace(/^["']|["']$/g, '') || "Disponível";
                 let situacao = "Disponível";
                 if (situacaoRaw.toLowerCase().includes("reserv")) situacao = "Reservado";
-                else if (situacaoRaw.toLowerCase().includes("contrato") || situacaoRaw.toLowerCase().includes("assinado")) situacao = "Contrato Assinado";
-                
-                const valorRaw = idxValor !== -1 ? row[idxValor] : (row[4] ? row[4] : 0);
-                const valor = parseValorBrasil(valorRaw);
-                
-                parsed.push({
-                    empresa: empresa,
-                    local: local,
-                    quantidade: quantidade,
-                    situacao: situacao,
-                    valor: valor,
-                    segmento: deriveSegmento(empresa)
-                });
+                else if (situacaoRaw.toLowerCase().includes("contrato")) situacao = "Contrato Assinado";
+                let valor = parseValorBrasil(row[colValor]);
+                parsed.push({ empresa, local: localRaw, quantidade, situacao, valor, segmento: deriveSegmento(empresa) });
             }
-            
-            if (parsed.length === 0) {
-                throw new Error("Nenhum dado válido encontrado na planilha");
-            }
-            
+            if (parsed.length === 0) throw new Error("Nenhum dado válido encontrado");
             salesData = parsed;
             document.getElementById("lastUpdate").innerHTML = `Última atualização: ${new Date().toLocaleString()}`;
-            document.getElementById("syncStatus").innerHTML = "✅ Google Sheets (XLSX)";
+            document.getElementById("syncStatus").innerHTML = "✅ Dados carregados com sucesso!";
             showToast(`✅ ${salesData.length} empresas carregadas!`);
             return true;
-            
         } catch(e) {
-            console.error("Erro:", e);
-            document.getElementById("syncStatus").innerHTML = "⚠️ Erro - usando dados locais";
-            showToast(`Erro: ${e.message}. Usando dados de exemplo.`, true);
+            console.error("Erro ao carregar:", e);
+            document.getElementById("syncStatus").innerHTML = "⚠️ Erro na conexão - usando dados de exemplo";
+            showToast("Falha ao carregar planilha. Verifique se a planilha está pública.", true);
             loadFallbackData();
             return false;
         }
     }
 
     function loadFallbackData() {
-        salesData = FALLBACK_DATA.map(row => {
-            let local = row[0];
-            if (local === "Externo") local = "Externo - Demais Espaços";
-            return {
-                empresa: row[1],
-                local: local,
-                quantidade: row[2],
-                situacao: row[3],
-                valor: row[4],
-                segmento: deriveSegmento(row[1])
-            };
-        });
-        document.getElementById("lastUpdate").innerHTML = `⚠️ Dados de exemplo - verifique sua planilha`;
-        document.getElementById("syncStatus").innerHTML = "⚠️ Dados locais (fallback)";
+        salesData = [
+            { empresa: "Crecerto", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 13184, segmento: "Diversos" },
+            { empresa: "Detalhes Móveis", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 18952, segmento: "Móveis" },
+            { empresa: "Consórcio Itá", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 9888, segmento: "Diversos" },
+            { empresa: "Sicredi", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 9888, segmento: "Diversos" },
+            { empresa: "Unimed", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 9888, segmento: "Saúde" },
+            { empresa: "BTM Brindes", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Contrato Assinado", valor: 9888, segmento: "Diversos" }
+        ];
+        document.getElementById("lastUpdate").innerHTML = `Dados de exemplo (fallback) - verifique sua planilha`;
     }
 
     function getFilteredData() {
@@ -337,6 +286,7 @@
         for (let [local, data] of Object.entries(stats)) {
             let ocupReal = data.reservado + data.contrato;
             let perc = Math.min(100, (ocupReal / data.total) * 100);
+            let hasExcess = ocupReal > data.total;
             let card = document.createElement("div");
             card.className = `map-location ${currentLocationFilter === local ? 'selected' : ''}`;
             card.onclick = () => {
@@ -346,8 +296,9 @@
                 renderTable();
                 updateFilterTotals();
             };
+            let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes">⚠️</span>` : '';
             card.innerHTML = `
-                <div class="location-header"><div class="location-name"><i class="fas fa-map-marker"></i> ${local}</div></div>
+                <div class="location-header"><div class="location-name"><i class="fas fa-map-marker"></i> ${local} ${warning}</div></div>
                 <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div>
                 <div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div>
                 <div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span></div>
@@ -369,7 +320,7 @@
             let ocup = data.reservado + data.contrato;
             let disponivel = Math.max(0, data.total - ocup);
             let perc = Math.min(100, Math.round((ocup / data.total) * 100));
-            html += `<tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</td></tr>`;
+            html += `<tr><td><strong>${local}</strong></td><td>${data.total}</td><td>${disponivel}</td><td>${data.reservado}</td><td>${data.contrato}</td><td>${perc}%</span></td></tr>`;
         }
         document.getElementById("situacaoTableBody").innerHTML = html;
     }
@@ -484,18 +435,16 @@
             opt.textContent = loc;
             locSelect.appendChild(opt);
         });
-        locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); updateFilterTotals(); });
-        document.getElementById('situationFilter').addEventListener('change', (e) => { currentSituationFilter = e.target.value || null; renderTable(); updateFilterTotals(); });
-        document.getElementById('sortOrder').addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTable(); updateFilterTotals(); });
-        document.getElementById('searchInput').addEventListener('input', (e) => { currentSearchTerm = e.target.value; renderTable(); updateFilterTotals(); });
+        locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); });
+        document.getElementById('situationFilter').addEventListener('change', (e) => { currentSituationFilter = e.target.value || null; renderTable(); });
+        document.getElementById('sortOrder').addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTable(); });
+        document.getElementById('searchInput').addEventListener('input', (e) => { currentSearchTerm = e.target.value; renderTable(); });
     }
 
-    // Eventos
     document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
     document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
     document.getElementById('refreshBtn').addEventListener('click', async () => { await loadFromGoogleSheets(); refreshAll(); });
 
-    // Inicialização
     (async () => {
         await loadFromGoogleSheets();
         populateFilters();
