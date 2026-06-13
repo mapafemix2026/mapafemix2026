@@ -77,6 +77,10 @@
         .charts-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem; }
         .chart-card-pie { flex: 0.6; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; }
         .chart-card-gauge { flex: 1.4; background: white; border-radius: 28px; padding: 1rem; border: 1px solid #e8dccc; text-align: center; }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .loading-spinner { background: white; padding: 2rem; border-radius: 28px; text-align: center; }
+        .loading-spinner i { font-size: 3rem; color: #FFC107; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } .action-buttons { flex-direction: column; align-items: stretch; } .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; } }
     </style>
 </head>
@@ -121,16 +125,15 @@
             <div class="admin-actions"><div class="mode-badge" id="modeBadge"><i class="fas fa-eye"></i> Modo Público</div><button class="admin-login-btn" id="openAdminBtn"><i class="fas fa-user-shield"></i> Área Administrativa</button></div>
         </div>
 
-        <div class="status-bar"><div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span id="modeStatus" class="badge badge-public">Visualização Pública</span></div><div><i class="fas fa-info-circle"></i> Dados salvos na nuvem via GitHub API</div></div>
+        <div class="status-bar"><div><i class="fas fa-chart-line"></i> <strong>Status:</strong> <span id="modeStatus" class="badge badge-public">Visualização Pública</span></div><div><i class="fas fa-info-circle"></i> <span id="dataSourceStatus">Carregando dados...</span></div></div>
 
         <div class="action-buttons" id="actionButtons">
             <button class="btn btn-primary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
             <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+            <button class="btn btn-info" id="refreshDataBtn"><i class="fas fa-sync-alt"></i> Atualizar da Planilha</button>
         </div>
 
         <div class="map-container"><h3><i class="fas fa-map-marked-alt"></i> Mapa Interativo</h3><div class="map-grid" id="mapGrid"></div><p style="font-size:0.7rem; text-align:center;">Clique em um local para filtrar a tabela</p></div>
-
-        <div id="standsOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:1500;"><div style="background:white; padding:1.5rem; border-radius:28px; max-width:500px; width:90%;"><div style="display:flex; justify-content:space-between;"><h3>Stands Multiuso</h3><button id="closeStandsBtn" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button></div><div id="standsGrid"></div></div></div>
 
         <div class="kpi-grid">
             <div class="kpi-card"><div class="kpi-title">💰 RECEITA TOTAL</div><div class="kpi-value" id="totalRevenue">R$ 0</div></div>
@@ -143,9 +146,7 @@
         <div class="charts-row">
             <div class="chart-card-pie">
                 <h3><i class="fas fa-chart-pie"></i> Proporção por Situação</h3>
-                <div style="max-width: 260px; margin: 0 auto;">
-                    <canvas id="piePercentChart"></canvas>
-                </div>
+                <div style="max-width: 260px; margin: 0 auto;"><canvas id="piePercentChart"></canvas></div>
                 <div id="piePercentLegend" style="margin-top: 1rem; text-align: center; font-size: 0.75rem;"></div>
             </div>
             <div class="chart-card-gauge">
@@ -158,64 +159,40 @@
             </div>
         </div>
 
-        <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody>            <tr><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
+        <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody> </table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
 
         <div class="data-section">
             <div class="table-header" style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Buscar empresa, local...">
-                </div>
-                <select id="locationFilter" class="filter-select">
-                    <option value="">Todos os locais</option>
-                </select>
-                <select id="situationFilter" class="filter-select">
-                    <option value="">Todas as situações</option>
-                    <option value="Disponível">Disponível</option>
-                    <option value="Reservado">Reservado</option>
-                    <option value="Contrato Assinado">Contrato Assinado</option>
-                </select>
-                <select id="sortOrder" class="filter-select">
-                    <option value="asc">Ordem Alfabética (A-Z)</option>
-                    <option value="desc">Ordem Alfabética (Z-A)</option>
-                </select>
+                <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Buscar empresa, local..."></div>
+                <select id="locationFilter" class="filter-select"><option value="">Todos os locais</option></select>
+                <select id="situationFilter" class="filter-select"><option value="">Todas as situações</option><option value="Disponível">Disponível</option><option value="Reservado">Reservado</option><option value="Contrato Assinado">Contrato Assinado</option></select>
+                <select id="sortOrder" class="filter-select"><option value="asc">Ordem Alfabética (A-Z)</option><option value="desc">Ordem Alfabética (Z-A)</option></select>
                 <div><span id="editHint"><i class="fas fa-lock"></i> Modo visualização</span></div>
             </div>
-            <div id="filterTotals" class="totals-bar" style="background: #f9f1e8; border-radius: 16px; padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; gap: 2rem; flex-wrap: wrap;">
-                <span>Total de estandes: 0</span>
-                <span>Valor total: R$ 0</span>
-            </div>
-            <div class="table-wrapper">
-                <table id="salesTable">
-                    <thead>
-                        <th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th><th id="actionsHeader"></th>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
+            <div id="filterTotals" class="totals-bar" style="background: #f9f1e8; border-radius: 16px; padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; gap: 2rem; flex-wrap: wrap;"><span>Total de estandes: 0</span><span>Valor total: R$ 0</span></div>
+            <div class="table-wrapper"><table id="salesTable"><thead><th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th><th id="actionsHeader"></th></thead><tbody id="tableBody"></tbody></table></div>
         </div>
 
-        <div class="maps-gallery">
-            <h3><i class="fas fa-map"></i> Plantas Oficiais</h3>
-            <div class="maps-grid">
-                <div class="map-card-image"><img src="mapa_implantacao_geral.png" onerror="this.style.display='none';"><div class="map-caption">Implantação Geral</div></div>
-                <div class="map-card-image"><img src="mapa_multiuso_tancredao.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (detalhe)</div></div>
-                <div class="map-card-image"><img src="mapa_multiuso_tancredao - Copia.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (todos)</div></div>
-            </div>
-        </div>
+        <div class="maps-gallery"><h3><i class="fas fa-map"></i> Plantas Oficiais</h3><div class="maps-grid"><div class="map-card-image"><img src="mapa_implantacao_geral.png" onerror="this.style.display='none';"><div class="map-caption">Implantação Geral</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (detalhe)</div></div><div class="map-card-image"><img src="mapa_multiuso_tancredao - Copia.png" onerror="this.style.display='none';"><div class="map-caption">Multiuso Tancredão (todos)</div></div></div></div>
 
-        <div class="footer">© FEMIX 2026 - Sandra Batistella | Capacidades conforme tabela oficial | Dados brutos da planilha</div>
+        <div class="footer">© FEMIX 2026 - Sandra Batistella | Dados sincronizados automaticamente com a planilha online</div>
     </div>
     <div id="toastMessage" class="toast-message"></div>
+    <div id="loadingOverlay" class="loading-overlay" style="display:none;"><div class="loading-spinner"><i class="fas fa-spinner"></i><p>Carregando dados da planilha...</p></div></div>
 
     <script>
-        // ========== CONFIGURAÇÕES DO GITHUB ==========
+        // ========== CONFIGURAÇÕES ==========
+        // LINK DA PLANILHA GOOGLE SHEETS (FORMATO CSV)
+        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQtU-SvBFsKl9FCp8VZRQvZoDnugtNz_-vAjWdQFn6mCanlSYNVOi5eEQ7RZa6aoIP_Dt5tz7WSfYEN/pub?output=csv";
+        
+        // PROXY CORS GRATUITO E CONFIÁVEL
+        const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+        
         const GITHUB_OWNER = "mapafemix2026";
         const GITHUB_TOKEN = "COLE_AQUI_SEU_NOVO_TOKEN_GHP";
         const REPO_NAME = "femix-dados";
 
-        // ========== CAPACIDADES ATUALIZADAS ==========
-        // Tancredão: 83 | Churrasqueiras: 5 | Novo: Alimentação Show: 1
+        // Capacidades atualizadas
         const locationCapacities = {
             "Tancredão - Ind e Com": 83,
             "Multiuso - Cdia Trend": 18,
@@ -235,61 +212,146 @@
         };
         const totalCapacidade = Object.values(locationCapacities).reduce((a,b)=>a+b,0);
 
-        // Dados da planilha (mesmos originais)
-        const rawData = [
-            ["Crecerto","Tancredão - Ind e Com",2,"Reservado",13184],["Detalhes Móveis","Tancredão - Ind e Com",2,"Reservado",18952],
-            ["Consórcio Itá","Tancredão - Ind e Com",2,"Reservado",9888],["Fischer Móveis","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["H2O Ambiental","Tancredão - Ind e Com",1,"Reservado",6582],["HS Consórcios","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["Mascarello Materiais de Construção","Tancredão - Ind e Com",1,"Reservado",4944],["Patria Segurança","Tancredão - Ind e Com",1,"Reservado",6592],
-            ["Roda Brasil","Tancredão - Ind e Com",4,"Reservado",19776],["Vida Mais","Tancredão - Ind e Com",6,"Reservado",44360],
-            ["Fachini SA","Externo",1,"Reservado",21825],["Ledir Automóveis","Externo - Concessionárias",1,"Reservado",0],
-            ["Espetos Marcon","Tancredão - Ind e Com",1,"Reservado",4944],["Faz Bem","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["Filtros Pellizzaro","Tancredão - Ind e Com",1,"Reservado",6592],["Flora agelu","Tancredão - Ind e Com",1,"Reservado",6592],
-            ["Gaafer","Tancredão - Ind e Com",1,"Reservado",4944],["Hidro Distribuidora","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["Home Tree","Tancredão - Ind e Com",1,"Reservado",4944],["Impercordia","Tancredão - Ind e Com",1,"Reservado",6592],
-            ["Inovar Aparelhos Auditivo","Tancredão - Ind e Com",1,"Reservado",4944],["Proteger","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["RK Telecom","Tancredão - Ind e Com",1,"Reservado",4944],["Rodosat","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["Schellsi Tecidos","Tancredão - Ind e Com",2,"Reservado",9888],["Sicredi","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["Top Center","Tancredão - Ind e Com",2,"Reservado",9888],["Unoesc Concórdia","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["Wanderli Borin - Febracis","Tancredão - Ind e Com",1,"Reservado",4944],["Aileen Semi Jóias","Multiuso - Cdia Trend",1,"Reservado",5285],
-            ["Art Couros","Multiuso - Cdia Trend",1,"Reservado",5285],["Atelie da Langerie","Multiuso - Cdia Trend",1,"Reservado",5285],
-            ["Esplendida Modas","Multiuso - Cdia Trend",1,"Reservado",5285],["Fada Madrinha","Multiuso - Cdia Trend",1,"Reservado",5285],
-            ["Iana Store","Multiuso - Cdia Trend",1,"Reservado",7467],["Paraiso Infantil","Multiuso - Cdia Trend",1,"Reservado",5285],
-            ["SEMEO","Multiuso - Cdia Trend",1,"Reservado",4557],["Sonhos de Mulher","Multiuso - Cdia Trend",1,"Reservado",5285],
-            ["Balbinot Empreiteira Ltda","Externo",1,"Reservado",1620],["Marinho Tramados","Externo - Espaços Privilegiados",1,"Reservado",6750],
-            ["Urbivolt","Externo - Espaços Privilegiados",1,"Reservado",6750],["Casa & Garden","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["Cia do Aluminio","Tancredão - Ind e Com",1,"Reservado",4944],["DGO Cred. Simples","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["DM Produções","Tancredão - Ind e Com",1,"Reservado",4944],["Mais Laser","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["MD Med","Tancredão - Ind e Com",1,"Reservado",4944],["Unimed","Tancredão - Ind e Com",2,"Reservado",9888],
-            ["Universidade do Contestado","Tancredão - Ind e Com",2,"Reservado",9888],["Pimenta Dourada","Multiuso - Cdia Trend",1,"Reservado",8922],
-            ["Concórdia Auto Center","Externo - Espaços Privilegiados",1,"Reservado",6750],["Nene Motos","Externo",2,"Reservado",6480],
-            ["BTM Brindes","Tancredão - Ind e Com",2,"Contrato Assinado",9888],["Chima Lis","Tancredão - Ind e Com",1,"Reservado",16480],
-            ["DMX Colchões","Tancredão - Ind e Com",4,"Reservado",0],["Lisandra Godoy Tapetes","Tancredão - Ind e Com",1,"Reservado",4944],
-            ["Marafim Móveis","Tancredão - Ind e Com",4,"Reservado",19776],["Eli Arte e Chimarrão","Tancredão - Ind e Com",1,"Reservado",4944]
+        // Dados padrão (fallback)
+        const defaultData = [
+            { empresa: "Crecerto", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 13184, segmento: "Diversos" },
+            { empresa: "Detalhes Móveis", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 18952, segmento: "Móveis" },
+            { empresa: "Consórcio Itá", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 9888, segmento: "Diversos" },
+            { empresa: "Fischer Móveis", local: "Tancredão - Ind e Com", quantidade: 2, situacao: "Reservado", valor: 9888, segmento: "Móveis" },
+            { empresa: "H2O Ambiental", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 6582, segmento: "Diversos" },
+            { empresa: "HS Consórcios", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 4944, segmento: "Diversos" },
+            { empresa: "Mascarello Materiais de Construção", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 4944, segmento: "Diversos" },
+            { empresa: "Patria Segurança", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 6592, segmento: "Diversos" },
+            { empresa: "Roda Brasil", local: "Tancredão - Ind e Com", quantidade: 4, situacao: "Reservado", valor: 19776, segmento: "Diversos" },
+            { empresa: "Vida Mais", local: "Tancredão - Ind e Com", quantidade: 6, situacao: "Reservado", valor: 44360, segmento: "Diversos" },
+            { empresa: "Fachini SA", local: "Externo - Demais Espaços", quantidade: 1, situacao: "Reservado", valor: 21825, segmento: "Diversos" },
+            { empresa: "Ledir Automóveis", local: "Externo - Concessionárias", quantidade: 1, situacao: "Reservado", valor: 0, segmento: "Veículos" },
+            { empresa: "Espetos Marcon", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 4944, segmento: "Alimentação" },
+            { empresa: "Faz Bem", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 4944, segmento: "Diversos" },
+            { empresa: "Filtros Pellizzaro", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 6592, segmento: "Diversos" },
+            { empresa: "Flora agelu", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 6592, segmento: "Diversos" },
+            { empresa: "Gaafer", local: "Tancredão - Ind e Com", quantidade: 1, situacao: "Reservado", valor: 4944, segmento: "Diversos" }
         ];
-
-        const defaultData = rawData.map(row => {
-            let local = row[1];
-            if (local === "Externo") local = "Externo - Demais Espaços";
-            return {
-                empresa: row[0], local: local, quantidade: row[2], situacao: row[3], valor: row[4]||0,
-                segmento: (()=>{let n=row[0].toLowerCase(); if(n.includes("móveis")) return "Móveis"; if(n.includes("auto")||n.includes("motos")) return "Veículos"; if(n.includes("saúde")||n.includes("med")) return "Saúde"; if(n.includes("aliment")) return "Alimentação"; if(n.includes("moda")||n.includes("joia")) return "Moda"; return "Diversos";})()
-            };
-        });
 
         let isAdmin = false;
         let salesData = [];
-        let currentLocationFilter = null;
-        let currentSituationFilter = null;
-        let currentSearchTerm = "";
-        let currentSortOrder = "asc";
+        let currentLocationFilter = null, currentSituationFilter = null, currentSearchTerm = "", currentSortOrder = "asc";
         let editMode = false;
         let piePercentChart, gaugeChart;
         let currentEditOriginalIdx = null;
-        const ADMIN_USER = "sandra";
-        const ADMIN_PASS = "livia2011";
+        const ADMIN_USER = "sandra", ADMIN_PASS = "livia2011";
 
-        async function saveToGitHub(data, showMsg = true) {
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function showToast(msg, isErr=false) {
+            const toast = document.getElementById('toastMessage');
+            toast.style.backgroundColor = isErr ? '#E67E22' : '#2E7A6E';
+            toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function determinarSegmento(nome) {
+            const n = nome.toLowerCase();
+            if(n.includes("móveis")) return "Móveis";
+            if(n.includes("auto") || n.includes("motos")) return "Veículos";
+            if(n.includes("saúde") || n.includes("med")) return "Saúde";
+            if(n.includes("aliment")) return "Alimentação";
+            if(n.includes("moda") || n.includes("joia")) return "Moda";
+            return "Diversos";
+        }
+
+        // ========== CARGA AUTOMÁTICA DA PLANILHA GOOGLE ==========
+        async function carregarDoGoogleSheets() {
+            showLoading(true);
+            try {
+                const urlComProxy = CORS_PROXY + encodeURIComponent(GOOGLE_SHEETS_CSV_URL);
+                const resposta = await fetch(urlComProxy);
+                
+                if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+                
+                const csvTexto = await resposta.text();
+                const linhas = csvTexto.trim().split("\n");
+                
+                if (linhas.length < 2) throw new Error("Planilha vazia");
+                
+                // Pular cabeçalho (primeira linha)
+                const novosDados = [];
+                for (let i = 1; i < linhas.length; i++) {
+                    const linha = linhas[i];
+                    // Parse CSV simples (respeitando vírgulas)
+                    const cols = [];
+                    let dentroAspas = false;
+                    let valorAtual = "";
+                    for (let char of linha) {
+                        if (char === '"') {
+                            dentroAspas = !dentroAspas;
+                        } else if (char === ',' && !dentroAspas) {
+                            cols.push(valorAtual.trim());
+                            valorAtual = "";
+                        } else {
+                            valorAtual += char;
+                        }
+                    }
+                    cols.push(valorAtual.trim());
+                    
+                    if (cols.length < 4) continue;
+                    
+                    let empresa = cols[0]?.replace(/^["']|["']$/g, '') || "";
+                    let local = cols[1]?.replace(/^["']|["']$/g, '') || "";
+                    let quantidade = parseInt(cols[2]) || 1;
+                    let situacao = cols[3]?.replace(/^["']|["']$/g, '') || "Disponível";
+                    let valor = parseFloat(cols[4]) || 0;
+                    
+                    if (!empresa) continue;
+                    if (local === "Externo") local = "Externo - Demais Espaços";
+                    if (!locationCapacities[local]) local = "Externo - Demais Espaços";
+                    
+                    novosDados.push({
+                        empresa: empresa,
+                        local: local,
+                        quantidade: quantidade,
+                        situacao: situacao,
+                        valor: valor,
+                        segmento: determinarSegmento(empresa)
+                    });
+                }
+                
+                if (novosDados.length === 0) throw new Error("Nenhum dado válido encontrado");
+                
+                salesData = novosDados;
+                document.getElementById('dataSourceStatus').innerHTML = '<i class="fas fa-cloud-download-alt"></i> Dados carregados da planilha online ✓';
+                document.getElementById('dataSourceStatus').style.color = "#2E7A6E";
+                
+                // Salvar no GitHub como cache
+                await saveToGitHub(salesData, false);
+                
+                refreshAll();
+                showToast(`✅ ${salesData.length} empresas carregadas da planilha!`);
+                return true;
+                
+            } catch (erro) {
+                console.error("Erro ao carregar do Google Sheets:", erro);
+                document.getElementById('dataSourceStatus').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro ao carregar planilha. Usando cache.';
+                document.getElementById('dataSourceStatus').style.color = "#E67E22";
+                
+                // Fallback: tentar GitHub
+                const carregado = await loadFromGitHub();
+                if (!carregado || salesData.length === 0) {
+                    salesData = JSON.parse(JSON.stringify(defaultData));
+                    showToast("⚠️ Usando dados locais de fallback", true);
+                }
+                refreshAll();
+                return false;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function saveToGitHub(data, showMsg = false) {
+            if (!GITHUB_TOKEN || GITHUB_TOKEN === "COLE_AQUI_SEU_NOVO_TOKEN_GHP") return false;
             try {
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
                 let sha = null;
@@ -302,40 +364,30 @@
                     headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: `Atualização: ${new Date().toLocaleString()}`, content: content, sha: sha, branch: "main" })
                 });
-                if (response.ok) { if (showMsg) showToast("✅ Dados salvos na nuvem (GitHub)!"); return true; }
-                else { const errorData = await response.json(); throw new Error(errorData.message); }
+                if (response.ok && showMsg) showToast("✅ Dados salvos no GitHub!");
+                return response.ok;
             } catch(e) {
-                console.error("Erro ao salvar:", e);
+                console.error("Erro GitHub:", e);
                 localStorage.setItem('femix_dashboard_data', JSON.stringify(data));
-                if (showMsg) showToast(`⚠️ Erro: ${e.message}. Salvo apenas neste navegador.`, true);
                 return false;
             }
         }
 
         async function loadFromGitHub() {
+            if (!GITHUB_TOKEN || GITHUB_TOKEN === "COLE_AQUI_SEU_NOVO_TOKEN_GHP") return false;
             try {
                 const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${REPO_NAME}/contents/femix_dados.json`, {
                     headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
                 });
                 if (res.status === 200) {
                     const data = await res.json();
-                    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-                    salesData = content;
+                    salesData = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                     return true;
                 }
             } catch(e) {}
             const saved = localStorage.getItem('femix_dashboard_data');
             if (saved) { salesData = JSON.parse(saved); return true; }
-            salesData = JSON.parse(JSON.stringify(defaultData));
             return false;
-        }
-
-        function showToast(msg, isErr=false) {
-            const toast = document.getElementById('toastMessage');
-            toast.style.backgroundColor = isErr ? '#E67E22' : '#2E7A6E';
-            toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 3000);
         }
 
         function getFilteredData() {
@@ -349,10 +401,8 @@
                 return true;
             });
             filtered.sort((a, b) => {
-                const nameA = a.empresa.toLowerCase();
-                const nameB = b.empresa.toLowerCase();
-                if (currentSortOrder === 'asc') return nameA.localeCompare(nameB);
-                else return nameB.localeCompare(nameA);
+                const nameA = a.empresa.toLowerCase(), nameB = b.empresa.toLowerCase();
+                return currentSortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
             });
             return filtered;
         }
@@ -394,83 +444,21 @@
                 let ocupReal = data.reservado + data.contrato;
                 let perc = Math.min(100, (ocupReal / data.total) * 100);
                 let hasExcess = ocupReal > data.total;
-                let iconMap = {
-                    "Tancredão - Ind e Com": "fa-industry", "Multiuso - Cdia Trend": "fa-store",
-                    "Externo - Motos": "fa-motorcycle", "Externo - Semi Novos": "fa-car",
-                    "Externo - Concessionárias": "fa-car-side", "Externo - Agropet": "fa-paw",
-                    "Externo - Parque de Diversões": "fa-tree", "Externo - Caminhões": "fa-truck",
-                    "Externo - Espaços Privilegiados": "fa-crown", "Externo - Alimentação": "fa-utensils",
-                    "Externo - Demais Espaços": "fa-store", "Espaço Conceito": "fa-star",
-                    "Externo - Churrasqueiras": "fa-fire", "Restaurante": "fa-utensil-spoon",
-                    "Espaço Alimentação Show": "fa-apple-alt"
-                };
+                let iconMap = { "Tancredão - Ind e Com":"fa-industry","Multiuso - Cdia Trend":"fa-store","Externo - Motos":"fa-motorcycle","Externo - Semi Novos":"fa-car","Externo - Concessionárias":"fa-car-side","Externo - Agropet":"fa-paw","Externo - Parque de Diversões":"fa-tree","Externo - Caminhões":"fa-truck","Externo - Espaços Privilegiados":"fa-crown","Externo - Alimentação":"fa-utensils","Externo - Demais Espaços":"fa-store","Espaço Conceito":"fa-star","Externo - Churrasqueiras":"fa-fire","Restaurante":"fa-utensil-spoon","Espaço Alimentação Show":"fa-apple-alt"};
                 let card = document.createElement("div");
                 card.className = `map-location ${currentLocationFilter === local ? 'selected' : ''}`;
                 card.onclick = () => {
-                    if (local === "Multiuso - Cdia Trend") {
-                        document.getElementById("standsOverlay").style.display = "flex";
-                        renderStands();
-                    } else {
-                        currentLocationFilter = currentLocationFilter === local ? null : local;
-                        const locSelect = document.getElementById('locationFilter');
-                        if (locSelect) locSelect.value = currentLocationFilter || '';
-                        renderMap();
-                        renderTable();
-                        updateFilterTotals();
-                    }
+                    currentLocationFilter = currentLocationFilter === local ? null : local;
+                    const locSelect = document.getElementById('locationFilter');
+                    if (locSelect) locSelect.value = currentLocationFilter || '';
+                    renderMap();
+                    renderTable();
+                    updateFilterTotals();
                 };
                 let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes além da capacidade">⚠️</span>` : '';
-                card.innerHTML = `
-                    <div class="location-header">
-                        <div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div>
-                        <div class="location-icon"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i></div>
-                    </div>
-                    <div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;">
-                        <span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span>
-                        <span>🏢 ${ocupReal}/${data.total}</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div>
-                    <div class="status-badges">
-                        <span class="badge-reservado">Reservados: ${data.reservado}</span>
-                        <span class="badge-contrato">Contrato: ${data.contrato}</span>
-                        <span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span>
-                    </div>
-                `;
+                card.innerHTML = `<div class="location-header"><div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div><div class="location-icon"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i></div></div><div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div><div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span></div>`;
                 grid.appendChild(card);
             }
-        }
-
-        function renderStands() {
-            let grid = document.getElementById("standsGrid");
-            let stands = salesData.filter(d => d.local === "Multiuso - Cdia Trend");
-            grid.innerHTML = "";
-            if (!stands.length) {
-                grid.innerHTML = "<p>Nenhum stand cadastrado.</p>";
-                return;
-            }
-            stands.forEach(s => {
-                let bc = s.situacao === "Contrato Assinado" ? "#2E7A6E" : (s.situacao === "Reservado" ? "#FFC107" : "#aaa");
-                let card = document.createElement("div");
-                card.style.borderLeft = `4px solid ${bc}`;
-                card.style.padding = "0.5rem";
-                card.style.margin = "0.5rem 0";
-                card.style.background = "#faf7f2";
-                card.style.borderRadius = "12px";
-                card.style.cursor = "pointer";
-                card.onclick = () => {
-                    if (!isAdmin) { showToast("Faça login para editar", true); return; }
-                    let nova = prompt("Alterar situação:\n1-Disponível\n2-Reservado\n3-Contrato Assinado", s.situacao === "Reservado" ? "2" : (s.situacao === "Contrato Assinado" ? "3" : "1"));
-                    if (nova && ["1","2","3"].includes(nova)) {
-                        let map = {1:"Disponível",2:"Reservado",3:"Contrato Assinado"};
-                        s.situacao = map[nova];
-                        saveToGitHub(salesData);
-                        renderStands();
-                        refreshAll();
-                    }
-                };
-                card.innerHTML = `<strong>${s.empresa}</strong> (${s.quantidade} est.)<br><span style="color:${bc}">${s.situacao}</span>`;
-                grid.appendChild(card);
-            });
         }
 
         function renderSituacaoTable() {
@@ -505,24 +493,11 @@
                 piePercentChart.update();
             } else {
                 const ctxPie = document.getElementById('piePercentChart').getContext('2d');
-                piePercentChart = new Chart(ctxPie, {
-                    type: 'pie',
-                    data: { labels: labels, datasets: [{ data: valoresAbsolutos, backgroundColor: cores, borderWidth: 0 }] },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            tooltip: { callbacks: { label: ctx => { let val = ctx.raw; let pct = ((val / total) * 100).toFixed(1); return `${ctx.label}: ${val} estandes (${pct}%)`; } } },
-                            legend: { display: false }
-                        }
-                    }
-                });
+                piePercentChart = new Chart(ctxPie, { type:'pie', data:{ labels:labels, datasets:[{ data:valoresAbsolutos, backgroundColor:cores, borderWidth:0 }] }, options:{ responsive:true, plugins:{ tooltip:{ callbacks:{ label:ctx=>{ let val=ctx.raw; let pct=((val/total)*100).toFixed(1); return `${ctx.label}: ${val} estandes (${pct}%)`; } } }, legend:{ display:false } } } });
             }
             let legendDiv = document.getElementById('piePercentLegend');
             legendDiv.innerHTML = "";
-            for (let i = 0; i < labels.length; i++) {
-                let pct = total ? ((valoresAbsolutos[i] / total) * 100).toFixed(1) : 0;
-                legendDiv.innerHTML += `<span style="display:inline-block; margin:0 8px;"><span style="background:${cores[i]}; width:12px; height:12px; display:inline-block; border-radius:2px;"></span> ${labels[i]}: ${valoresAbsolutos[i]} (${pct}%)</span>`;
-            }
+            for (let i=0; i<labels.length; i++) { let pct = total ? ((valoresAbsolutos[i]/total)*100).toFixed(1) : 0; legendDiv.innerHTML += `<span style="display:inline-block; margin:0 8px;"><span style="background:${cores[i]}; width:12px; height:12px; display:inline-block; border-radius:2px;"></span> ${labels[i]}: ${valoresAbsolutos[i]} (${pct}%)</span>`; }
         }
 
         function updateGauge(occupancyPercent) {
@@ -530,11 +505,7 @@
             const value = Math.min(100, occupancyPercent);
             const remainder = 100 - value;
             if (gaugeChart) gaugeChart.destroy();
-            gaugeChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: { datasets: [{ data: [value, remainder], backgroundColor: ['#2E7A6E', '#e0d5c8'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '70%' }] },
-                options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { enabled: false }, legend: { display: false } } }
-            });
+            gaugeChart = new Chart(ctx, { type:'doughnut', data:{ datasets:[{ data:[value, remainder], backgroundColor:['#2E7A6E','#e0d5c8'], borderWidth:0, circumference:180, rotation:270, cutout:'70%' }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ tooltip:{ enabled:false }, legend:{ display:false } } } });
             document.getElementById('gaugeLabel').innerText = `${Math.round(value)}% de ocupação total`;
             document.getElementById('gaugeCenterLabel').innerText = `${Math.round(value)}%`;
         }
@@ -546,80 +517,19 @@
             tbody.innerHTML = filtered.map((item, idx) => {
                 const originalIdx = salesData.findIndex(d => d.empresa === item.empresa && d.local === item.local && d.quantidade === item.quantidade && d.valor === item.valor && d.segmento === item.segmento && d.situacao === item.situacao);
                 const safeIdx = originalIdx !== -1 ? originalIdx : idx;
-                return `
-                    <tr data-original-idx="${safeIdx}">
-                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td>
-                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td>
-                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td>
-                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td>
-                        <td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td>
-                        <td>${isAdmin ? `<select class="status-select" data-original-idx="${safeIdx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td>
-                        <td>${isAdmin ? `<button class="btn-edit" data-original-idx="${safeIdx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-original-idx="${safeIdx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td>
-                    </tr>
-                `;
+                return `<tr data-original-idx="${safeIdx}"><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td><td>${isAdmin ? `<select class="status-select" data-original-idx="${safeIdx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td><td>${isAdmin ? `<button class="btn-edit" data-original-idx="${safeIdx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-original-idx="${safeIdx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td></tr>`;
             }).join('');
-            if (isAdmin) {
-                attachEditEvents();
-                attachDeleteEvents();
-                attachStatusEvents();
-                document.querySelectorAll('.btn-edit').forEach(btn => {
-                    btn.removeEventListener('click', btn.editHandler);
-                    btn.editHandler = () => openEditModal(parseInt(btn.dataset.originalIdx));
-                    btn.addEventListener('click', btn.editHandler);
-                });
-            }
+            if (isAdmin) { attachEditEvents(); attachDeleteEvents(); attachStatusEvents(); document.querySelectorAll('.btn-edit').forEach(btn => { btn.removeEventListener('click', btn.editHandler); btn.editHandler = () => openEditModal(parseInt(btn.dataset.originalIdx)); btn.addEventListener('click', btn.editHandler); }); }
             updateFilterTotals();
         }
 
         function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
-
-        function attachEditEvents() {
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                cell.removeEventListener('click', cell.clickHandler);
-                cell.clickHandler = e => {
-                    e.stopPropagation();
-                    const row = cell.closest('tr');
-                    if (!row) return;
-                    const originalIdx = parseInt(row.dataset.originalIdx);
-                    if (isNaN(originalIdx)) return;
-                    const field = cell.dataset.field;
-                    const cur = cell.dataset.value;
-                    makeEditable(cell, originalIdx, field, cur);
-                };
-                cell.addEventListener('click', cell.clickHandler);
-            });
-        }
-
-        function attachDeleteEvents() {
-            document.querySelectorAll('.btn-delete').forEach(btn => {
-                btn.removeEventListener('click', btn.clickHandler);
-                btn.clickHandler = async () => {
-                    let originalIdx = parseInt(btn.dataset.originalIdx);
-                    salesData.splice(originalIdx, 1);
-                    await saveToGitHub(salesData);
-                    refreshAll();
-                    showToast("Empresa removida!");
-                };
-                btn.addEventListener('click', btn.clickHandler);
-            });
-        }
-
-        function attachStatusEvents() {
-            document.querySelectorAll('.status-select').forEach(sel => {
-                sel.removeEventListener('change', sel.changeHandler);
-                sel.changeHandler = async () => {
-                    let originalIdx = parseInt(sel.dataset.originalIdx);
-                    salesData[originalIdx].situacao = sel.value;
-                    await saveToGitHub(salesData);
-                    refreshAll();
-                    showToast("Situação atualizada!");
-                };
-                sel.addEventListener('change', sel.changeHandler);
-            });
-        }
+        function attachEditEvents() { document.querySelectorAll('.editable-cell').forEach(cell => { cell.removeEventListener('click', cell.clickHandler); cell.clickHandler = e => { e.stopPropagation(); const row = cell.closest('tr'); if(!row) return; const originalIdx = parseInt(row.dataset.originalIdx); if(isNaN(originalIdx)) return; const field = cell.dataset.field; const cur = cell.dataset.value; makeEditable(cell, originalIdx, field, cur); }; cell.addEventListener('click', cell.clickHandler); }); }
+        function attachDeleteEvents() { document.querySelectorAll('.btn-delete').forEach(btn => { btn.removeEventListener('click', btn.clickHandler); btn.clickHandler = async () => { let originalIdx = parseInt(btn.dataset.originalIdx); salesData.splice(originalIdx,1); await saveToGitHub(salesData, true); refreshAll(); showToast("Empresa removida!"); }; btn.addEventListener('click', btn.clickHandler); }); }
+        function attachStatusEvents() { document.querySelectorAll('.status-select').forEach(sel => { sel.removeEventListener('change', sel.changeHandler); sel.changeHandler = async () => { let originalIdx = parseInt(sel.dataset.originalIdx); salesData[originalIdx].situacao = sel.value; await saveToGitHub(salesData, true); refreshAll(); showToast("Situação atualizada!"); }; sel.addEventListener('change', sel.changeHandler); }); }
 
         function makeEditable(cell, originalIdx, field, cur) {
-            if (editMode) { showToast("Termine a edição atual primeiro", true); return; }
+            if(editMode) { showToast("Termine a edição atual primeiro", true); return; }
             editMode = true;
             const input = document.createElement('input');
             input.type = (field === 'valor' || field === 'quantidade') ? 'number' : 'text';
@@ -628,22 +538,10 @@
             cell.innerHTML = '';
             cell.appendChild(input);
             input.focus();
-            const save = async () => {
-                let val = input.value;
-                if (field === 'valor') val = parseFloat(val) || 0;
-                if (field === 'quantidade') val = parseInt(val) || 1;
-                salesData[originalIdx][field] = val;
-                editMode = false;
-                await saveToGitHub(salesData);
-                refreshAll();
-                showToast("Dados atualizados!");
-            };
-            const cancel = () => {
-                editMode = false;
-                refreshAll();
-            };
+            const save = async () => { let val = input.value; if(field === 'valor') val = parseFloat(val) || 0; if(field === 'quantidade') val = parseInt(val) || 1; salesData[originalIdx][field] = val; editMode = false; await saveToGitHub(salesData, true); refreshAll(); showToast("Dados atualizados!"); };
+            const cancel = () => { editMode = false; refreshAll(); };
             input.addEventListener('blur', save);
-            input.addEventListener('keypress', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); });
+            input.addEventListener('keypress', e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') cancel(); });
         }
 
         function openEditModal(originalIdx) {
@@ -652,225 +550,71 @@
             document.getElementById('editEmpresa').value = empresa.empresa;
             document.getElementById('editLocal').innerHTML = '';
             const locSelect = document.getElementById('editLocal');
-            const sortedLocations = Object.keys(locationCapacities).sort();
-            sortedLocations.forEach(loc => {
-                const option = document.createElement('option');
-                option.value = loc;
-                option.textContent = loc;
-                if (loc === empresa.local) option.selected = true;
-                locSelect.appendChild(option);
-            });
+            Object.keys(locationCapacities).sort().forEach(loc => { const option = document.createElement('option'); option.value = loc; option.textContent = loc; if(loc === empresa.local) option.selected = true; locSelect.appendChild(option); });
             document.getElementById('editQuantidade').value = empresa.quantidade;
             document.getElementById('editValor').value = empresa.valor;
             document.getElementById('editSegmento').value = empresa.segmento;
             document.getElementById('editSituacao').value = empresa.situacao;
-
-            const empresaList = document.getElementById('empresaList');
-            empresaList.innerHTML = '';
-            const uniqueEmpresas = [...new Set(salesData.map(e => e.empresa))].sort();
-            uniqueEmpresas.forEach(nome => {
-                const option = document.createElement('option');
-                option.value = nome;
-                empresaList.appendChild(option);
-            });
-
-            const segmentoList = document.getElementById('segmentoList');
-            segmentoList.innerHTML = '';
-            const uniqueSegmentos = [...new Set(salesData.map(e => e.segmento))].sort();
-            uniqueSegmentos.forEach(seg => {
-                const option = document.createElement('option');
-                option.value = seg;
-                segmentoList.appendChild(option);
-            });
-
+            const empresaList = document.getElementById('empresaList'); empresaList.innerHTML = '';
+            [...new Set(salesData.map(e=>e.empresa))].sort().forEach(nome=>{ const option=document.createElement('option'); option.value=nome; empresaList.appendChild(option); });
+            const segmentoList = document.getElementById('segmentoList'); segmentoList.innerHTML = '';
+            [...new Set(salesData.map(e=>e.segmento))].sort().forEach(seg=>{ const option=document.createElement('option'); option.value=seg; segmentoList.appendChild(option); });
             document.getElementById('editModal').style.display = 'flex';
         }
 
-        function closeEditModal() {
-            document.getElementById('editModal').style.display = 'none';
-            currentEditOriginalIdx = null;
-        }
+        function closeEditModal() { document.getElementById('editModal').style.display = 'none'; currentEditOriginalIdx = null; }
+        async function saveEditModal() { if(currentEditOriginalIdx === null) return; const novaEmpresa = { empresa: document.getElementById('editEmpresa').value, local: document.getElementById('editLocal').value, quantidade: parseInt(document.getElementById('editQuantidade').value) || 1, valor: parseFloat(document.getElementById('editValor').value) || 0, segmento: document.getElementById('editSegmento').value, situacao: document.getElementById('editSituacao').value }; salesData[currentEditOriginalIdx] = novaEmpresa; closeEditModal(); await saveToGitHub(salesData, true); refreshAll(); showToast("Empresa atualizada!"); }
+        function refreshAll() { if(editMode) return; const ocupPercent = updateKPIs(); renderMap(); renderSituacaoTable(); renderTable(); updatePieChart(); updateGauge(ocupPercent); }
 
-        async function saveEditModal() {
-            if (currentEditOriginalIdx === null) return;
-            const novaEmpresa = {
-                empresa: document.getElementById('editEmpresa').value,
-                local: document.getElementById('editLocal').value,
-                quantidade: parseInt(document.getElementById('editQuantidade').value) || 1,
-                valor: parseFloat(document.getElementById('editValor').value) || 0,
-                segmento: document.getElementById('editSegmento').value,
-                situacao: document.getElementById('editSituacao').value
-            };
-            salesData[currentEditOriginalIdx] = novaEmpresa;
-            closeEditModal();
-            await saveToGitHub(salesData);
-            refreshAll();
-            showToast("Empresa atualizada!");
-        }
-
-        function refreshAll() {
-            if (editMode) return;
-            const ocupPercent = updateKPIs();
-            renderMap();
-            renderSituacaoTable();
-            renderTable();
-            updatePieChart();
-            updateGauge(ocupPercent);
-        }
-
-        async function exportToPDF() {
-            showToast("Gerando PDF...");
-            let el = document.getElementById("dashboardToExport");
-            try {
-                let canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
-                let imgData = canvas.toDataURL('image/png');
-                let { jsPDF } = window.jspdf;
-                let pdf = new jsPDF('p', 'mm', 'a4');
-                let imgWidth = 210;
-                let imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
-                while (heightLeft > 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= 297;
-                }
-                pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`);
-                showToast("PDF gerado!");
-            } catch (e) { showToast("Erro ao gerar PDF", true); }
-        }
-
-        function exportToExcel() {
-            let wsData = [["Empresa", "Local", "Quantidade", "Valor Total (R$)", "Segmento", "Situação"]];
-            salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao]));
-            let ws = XLSX.utils.aoa_to_sheet(wsData);
-            let wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas");
-            XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`);
-            showToast("Exportado Excel!");
-        }
-
-        async function addSampleCompany() {
-            if (editMode) { showToast("Termine a edição atual primeiro", true); return; }
-            const nova = {
-                empresa: `Nova Empresa ${salesData.length+1}`,
-                local: "Externo - Demais Espaços",
-                quantidade: 1,
-                situacao: "Disponível",
-                valor: 5000,
-                segmento: "Diversos"
-            };
-            salesData.push(nova);
-            await saveToGitHub(salesData);
-            refreshAll();
-            showToast("Empresa adicionada!");
-        }
-
-        async function resetData() {
-            if (confirm("Resetar dados?")) {
-                salesData = JSON.parse(JSON.stringify(defaultData));
-                await saveToGitHub(salesData);
-                refreshAll();
-                showToast("Dados resetados!");
-            }
-        }
-
+        async function exportToPDF() { showToast("Gerando PDF..."); let el = document.getElementById("dashboardToExport"); try { let canvas = await html2canvas(el, { scale:2, useCORS:true, logging:false }); let imgData = canvas.toDataURL('image/png'); let { jsPDF } = window.jspdf; let pdf = new jsPDF('p','mm','a4'); let imgWidth = 210; let imgHeight = (canvas.height * imgWidth) / canvas.width; let heightLeft = imgHeight; let position = 0; pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= 297; while(heightLeft > 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= 297; } pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`); showToast("PDF gerado!"); } catch(e) { showToast("Erro ao gerar PDF", true); } }
+        function exportToExcel() { let wsData = [["Empresa","Local","Quantidade","Valor Total (R$)","Segmento","Situação"]]; salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao])); let ws = XLSX.utils.aoa_to_sheet(wsData); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas"); XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`); showToast("Exportado Excel!"); }
+        
+        async function addSampleCompany() { if(editMode) { showToast("Termine a edição atual primeiro", true); return; } const nova = { empresa: `Nova Empresa ${salesData.length+1}`, local: "Externo - Demais Espaços", quantidade: 1, situacao: "Disponível", valor: 5000, segmento: "Diversos" }; salesData.push(nova); await saveToGitHub(salesData, true); refreshAll(); showToast("Empresa adicionada!"); }
+        async function resetData() { if(confirm("Resetar dados?")) { salesData = JSON.parse(JSON.stringify(defaultData)); await saveToGitHub(salesData, true); refreshAll(); showToast("Dados resetados!"); } }
+        
         function openAdminModal() { document.getElementById('adminModal').classList.add('active'); }
         function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
-        function doAdminLogin() {
-            const user = document.getElementById('adminUser').value.trim().toLowerCase();
-            const pass = document.getElementById('adminPass').value;
-            if (user === ADMIN_USER && pass === ADMIN_PASS) {
-                isAdmin = true;
-                sessionStorage.setItem('femix_admin', 'true');
-                closeAdminModal();
-                document.getElementById('modeBadge').innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador';
-                document.getElementById('modeStatus').innerHTML = 'Administradora - Edição Liberada';
-                document.getElementById('editHint').innerHTML = '<i class="fas fa-edit"></i> Clique para editar';
-                document.getElementById('actionsHeader').innerHTML = 'Ações';
-                document.getElementById('actionButtons').innerHTML = `
-                    <button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button>
-                    <button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-                    <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-                    <button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button>
-                    <button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button>
-                `;
-                document.getElementById('addSampleBtn')?.addEventListener('click', addSampleCompany);
-                document.getElementById('saveNowBtn')?.addEventListener('click', () => saveToGitHub(salesData, true));
-                document.getElementById('resetDataBtn')?.addEventListener('click', resetData);
-                document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
-                document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF);
-                refreshAll();
-                showToast("Modo administrador ativado!");
-            } else {
-                document.getElementById('adminLoginError').style.display = 'block';
-                setTimeout(() => document.getElementById('adminLoginError').style.display = 'none', 3000);
-            }
-        }
+        function doAdminLogin() { const user = document.getElementById('adminUser').value.trim().toLowerCase(); const pass = document.getElementById('adminPass').value; if(user === ADMIN_USER && pass === ADMIN_PASS) { isAdmin = true; sessionStorage.setItem('femix_admin','true'); closeAdminModal(); document.getElementById('modeBadge').innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador'; document.getElementById('modeStatus').innerHTML = 'Administradora - Edição Liberada'; document.getElementById('editHint').innerHTML = '<i class="fas fa-edit"></i> Clique para editar'; document.getElementById('actionsHeader').innerHTML = 'Ações'; document.getElementById('actionButtons').innerHTML = `<button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button><button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button><button class="btn btn-info" id="refreshDataBtn"><i class="fas fa-sync-alt"></i> Atualizar da Planilha</button><button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button><button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button>`; document.getElementById('addSampleBtn')?.addEventListener('click', addSampleCompany); document.getElementById('saveNowBtn')?.addEventListener('click', () => saveToGitHub(salesData, true)); document.getElementById('resetDataBtn')?.addEventListener('click', resetData); document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel); document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF); document.getElementById('refreshDataBtn')?.addEventListener('click', () => carregarDoGoogleSheets()); refreshAll(); showToast("Modo administrador ativado!"); } else { document.getElementById('adminLoginError').style.display = 'block'; setTimeout(() => document.getElementById('adminLoginError').style.display = 'none', 3000); } }
 
         function populateFilters() {
             const locSelect = document.getElementById('locationFilter');
             locSelect.innerHTML = '<option value="">Todos os locais</option>';
-            Object.keys(locationCapacities).sort().forEach(loc => {
-                const option = document.createElement('option');
-                option.value = loc;
-                option.textContent = loc;
-                locSelect.appendChild(option);
-            });
+            Object.keys(locationCapacities).sort().forEach(loc => { const option = document.createElement('option'); option.value = loc; option.textContent = loc; locSelect.appendChild(option); });
             locSelect.value = currentLocationFilter || '';
-            locSelect.addEventListener('change', (e) => {
-                currentLocationFilter = e.target.value || null;
-                renderMap();
-                renderTable();
-            });
-
-            const sitSelect = document.getElementById('situationFilter');
-            sitSelect.value = currentSituationFilter || '';
-            sitSelect.addEventListener('change', (e) => {
-                currentSituationFilter = e.target.value || null;
-                renderTable();
-            });
-
-            const sortSelect = document.getElementById('sortOrder');
-            sortSelect.value = currentSortOrder;
-            sortSelect.addEventListener('change', (e) => {
-                currentSortOrder = e.target.value;
-                renderTable();
-            });
+            locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); });
+            const sitSelect = document.getElementById('situationFilter'); sitSelect.value = currentSituationFilter || ''; sitSelect.addEventListener('change', (e) => { currentSituationFilter = e.target.value || null; renderTable(); });
+            const sortSelect = document.getElementById('sortOrder'); sortSelect.value = currentSortOrder; sortSelect.addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTable(); });
         }
 
         document.getElementById('openAdminBtn').addEventListener('click', openAdminModal);
         document.getElementById('closeModalBtn').addEventListener('click', closeAdminModal);
         document.getElementById('confirmLoginBtn').addEventListener('click', doAdminLogin);
-        document.getElementById('closeStandsBtn').addEventListener('click', () => document.getElementById('standsOverlay').style.display = 'none');
         document.getElementById('searchInput').addEventListener('input', e => { currentSearchTerm = e.target.value; renderTable(); });
         document.getElementById('saveEditBtn').addEventListener('click', saveEditModal);
         document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+        document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+        document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
+        document.getElementById('refreshDataBtn')?.addEventListener('click', () => carregarDoGoogleSheets());
 
         (async () => {
-            await loadFromGitHub();
+            // Primeiro tenta carregar da planilha automaticamente
+            await carregarDoGoogleSheets();
             populateFilters();
-            if (sessionStorage.getItem('femix_admin') === 'true') {
-                isAdmin = true;
-                document.getElementById('modeBadge').innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador';
-                document.getElementById('modeStatus').innerHTML = 'Administradora - Edição Liberada';
-                document.getElementById('editHint').innerHTML = '<i class="fas fa-edit"></i> Clique para editar';
-                document.getElementById('actionsHeader').innerHTML = 'Ações';
-                document.getElementById('actionButtons').innerHTML = `
-                    <button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button>
-                    <button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-                    <button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-                    <button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button>
-                    <button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button>
-                `;
-                document.getElementById('addSampleBtn')?.addEventListener('click', addSampleCompany);
-                document.getElementById('saveNowBtn')?.addEventListener('click', () => saveToGitHub(salesData, true));
-                document.getElementById('resetDataBtn')?.addEventListener('click', resetData);
-                document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
-                document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF);
+            
+            if(sessionStorage.getItem('femix_admin') === 'true') { 
+                isAdmin = true; 
+                document.getElementById('modeBadge').innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador'; 
+                document.getElementById('modeStatus').innerHTML = 'Administradora - Edição Liberada'; 
+                document.getElementById('editHint').innerHTML = '<i class="fas fa-edit"></i> Clique para editar'; 
+                document.getElementById('actionsHeader').innerHTML = 'Ações'; 
+                document.getElementById('actionButtons').innerHTML = `<button class="btn btn-primary" id="addSampleBtn"><i class="fas fa-plus"></i> Nova Empresa</button><button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Exportar PDF</button><button class="btn btn-info" id="refreshDataBtn"><i class="fas fa-sync-alt"></i> Atualizar da Planilha</button><button class="btn btn-success" id="saveNowBtn"><i class="fas fa-save"></i> Salvar Dados</button><button class="btn btn-warning" id="resetDataBtn"><i class="fas fa-undo"></i> Resetar</button>`; 
+                document.getElementById('addSampleBtn')?.addEventListener('click', addSampleCompany); 
+                document.getElementById('saveNowBtn')?.addEventListener('click', () => saveToGitHub(salesData, true)); 
+                document.getElementById('resetDataBtn')?.addEventListener('click', resetData); 
+                document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel); 
+                document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF); 
+                document.getElementById('refreshDataBtn')?.addEventListener('click', () => carregarDoGoogleSheets());
+                refreshAll(); 
             }
             refreshAll();
         })();
