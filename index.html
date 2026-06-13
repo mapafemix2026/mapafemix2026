@@ -185,8 +185,13 @@
         // LINK DA PLANILHA GOOGLE SHEETS (FORMATO CSV)
         const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQtU-SvBFsKl9FCp8VZRQvZoDnugtNz_-vAjWdQFn6mCanlSYNVOi5eEQ7RZa6aoIP_Dt5tz7WSfYEN/pub?output=csv";
         
-        // PROXY CORS GRATUITO E CONFIÁVEL
-        const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+        // PROXIES CORS COM FALLBACK (tenta cada um até funcionar)
+        const CORS_PROXIES = [
+            (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            (url) => `https://thingproxy.freeboard.io/fetch/${url}`
+        ];
         
         const GITHUB_OWNER = "mapafemix2026";
         const GITHUB_TOKEN = "COLE_AQUI_SEU_NOVO_TOKEN_GHP";
@@ -264,15 +269,28 @@
         }
 
         // ========== CARGA AUTOMÁTICA DA PLANILHA GOOGLE ==========
+        async function fetchComFallback(url) {
+            let lastError = null;
+            for (let buildProxyUrl of CORS_PROXIES) {
+                try {
+                    const proxyUrl = buildProxyUrl(url);
+                    const resposta = await fetch(proxyUrl, { cache: "no-store" });
+                    if (!resposta.ok) { lastError = new Error(`HTTP ${resposta.status}`); continue; }
+                    const texto = await resposta.text();
+                    if (!texto || texto.trim().length < 10) { lastError = new Error("Resposta vazia"); continue; }
+                    return texto;
+                } catch (e) {
+                    lastError = e;
+                    continue;
+                }
+            }
+            throw lastError || new Error("Todos os proxies falharam");
+        }
+
         async function carregarDoGoogleSheets() {
             showLoading(true);
             try {
-                const urlComProxy = CORS_PROXY + encodeURIComponent(GOOGLE_SHEETS_CSV_URL);
-                const resposta = await fetch(urlComProxy);
-                
-                if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-                
-                const csvTexto = await resposta.text();
+                const csvTexto = await fetchComFallback(GOOGLE_SHEETS_CSV_URL);
                 const linhas = csvTexto.trim().split("\n");
                 
                 if (linhas.length < 2) throw new Error("Planilha vazia");
