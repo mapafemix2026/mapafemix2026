@@ -294,7 +294,17 @@
                     let quantidade = parseInt(getCelula(row, 2)) || 1;
                     let situacao = String(getCelula(row, 3)).trim() || "Disponível";
                     let valorRaw = getCelula(row, 4);
-                    let valor = typeof valorRaw === "number" ? valorRaw : (parseFloat(String(valorRaw).replace(/[^\d.,-]/g,'').replace(',','.')) || 0);
+                    let valor;
+                    if (typeof valorRaw === "number") {
+                        valor = valorRaw;
+                    } else {
+                        let s = String(valorRaw).trim().replace(/[R$\s]/g, '');
+                        if (s.includes(',')) {
+                            // Formato brasileiro: ponto = milhar, vírgula = decimal
+                            s = s.replace(/\./g, '').replace(',', '.');
+                        }
+                        valor = parseFloat(s) || 0;
+                    }
 
                     if (!empresa) continue;
                     if (empresa.toLowerCase() === "empresa" && local.toLowerCase() === "local") continue;
