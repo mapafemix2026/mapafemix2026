@@ -187,9 +187,9 @@
         
         // PROXIES CORS COM FALLBACK (tenta cada um até funcionar)
         const CORS_PROXIES = [
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-            (url) => `https://thingproxy.freeboard.io/fetch/${url}`
+            (url) => `https://r.jina.ai/${url}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
         ];
         
         const GITHUB_OWNER = "mapafemix2026";
@@ -290,7 +290,7 @@
             showLoading(true);
             try {
                 const csvTexto = await fetchComFallback(GOOGLE_SHEETS_CSV_URL);
-                const linhas = csvTexto.trim().split("\n");
+                const linhas = csvTexto.trim().split("\n").filter(l => l.trim().length > 0);
                 
                 if (linhas.length < 2) throw new Error("Planilha vazia");
                 
