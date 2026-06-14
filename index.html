@@ -81,7 +81,14 @@
         .loading-spinner { background: white; padding: 2rem; border-radius: 28px; text-align: center; }
         .loading-spinner i { font-size: 3rem; color: #FFC107; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } .action-buttons { flex-direction: column; align-items: stretch; } .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; } }
+        .resumo-locais-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1.2rem; }
+        .resumo-locais-table th { background: #1A4A5F; color: white; padding: 8px 10px; text-align: left; }
+        .resumo-locais-table td { padding: 7px 10px; border-bottom: 1px solid #f0e6d8; vertical-align: middle; }
+        .resumo-locais-table tr:hover { background: #faf7f2; }
+        .mini-bar-wrap { background: #e0d5c8; border-radius: 6px; height: 8px; width: 90px; display: inline-block; vertical-align: middle; margin-left: 6px; }
+        .mini-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #FFC107, #FF9800); }
+        .mini-bar-fill.full { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        @media (max-width: 768px) { .chart-card-pie, .chart-card-gauge { flex: 1 1 100%; } .action-buttons { flex-direction: column; align-items: stretch; } .search-box, .filter-select { width: 100%; margin-bottom: 0.5rem; } .mini-bar-wrap { width: 50px; } }
     </style>
 </head>
 <body>
@@ -160,6 +167,25 @@
         </div>
 
         <div class="chart-card"><h3><i class="fas fa-chart-simple"></i> Situação dos Estandes por Local</h3><div style="overflow-x:auto;"><table class="situacao-table"><thead> <th>Local</th><th>Total (capacidade)</th><th>Disponíveis</th><th>Reservados</th><th>Contrato Assinado</th><th>% Ocup</th> </thead><tbody id="situacaoTableBody"></tbody> </table><p style="font-size:0.7rem; color:#E67E22; margin-top:8px;"><i class="fas fa-info-circle"></i> Disponíveis = Capacidade - Ocupados (limitado à capacidade).</p></div></div>
+
+        <div class="chart-card" id="resumoLocaisSection">
+            <h3><i class="fas fa-map-pin"></i> Resumo por Local</h3>
+            <div class="table-wrapper">
+                <table class="resumo-locais-table" id="resumoLocaisTable">
+                    <thead>
+                        <tr>
+                            <th>Local</th>
+                            <th>Capacidade</th>
+                            <th>Ocupado</th>
+                            <th>Vagas</th>
+                            <th>% Ocup.</th>
+                            <th>Progresso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resumoLocaisBody"></tbody>
+                </table>
+            </div>
+        </div>
 
         <div class="data-section">
             <div class="table-header" style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
@@ -405,7 +431,7 @@
                 if (currentSituationFilter && i.situacao !== currentSituationFilter) return false;
                 if (currentSearchTerm) {
                     const t = currentSearchTerm.toLowerCase();
-                    return i.empresa.toLowerCase().includes(t) || i.local.toLowerCase().includes(t) || i.segmento.toLowerCase().includes(t);
+                    if (!i.empresa.toLowerCase().includes(t) && !i.local.toLowerCase().includes(t) && !i.segmento.toLowerCase().includes(t)) return false;
                 }
                 return true;
             });
@@ -526,13 +552,52 @@
         }
 
         function renderTable() {
-            let filtered = getFilteredData();
             let tbody = document.getElementById("tableBody");
-            if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado</td></tr>`; updateFilterTotals(); return; }
+
+            // Modo especial: filtro Disponivel — mostra vagas livres por local
+            if (currentSituationFilter === "Disponível") {
+                let ocupPorLocal = {};
+                for (let l in locationCapacities) ocupPorLocal[l] = 0;
+                salesData.forEach(i => {
+                    if (!ocupPorLocal.hasOwnProperty(i.local)) return;
+                    if (i.situacao === "Reservado" || i.situacao === "Contrato Assinado") {
+                        ocupPorLocal[i.local] += (i.quantidade || 1);
+                    }
+                });
+                let rows = [];
+                for (let [local, cap] of Object.entries(locationCapacities)) {
+                    if (currentLocationFilter && local !== currentLocationFilter) continue;
+                    let vagas = Math.max(0, cap - ocupPorLocal[local]);
+                    if (vagas === 0) continue;
+                    if (currentSearchTerm && !local.toLowerCase().includes(currentSearchTerm.toLowerCase())) continue;
+                    rows.push({ local, cap, vagas });
+                }
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">Nenhum local com vagas disponíveis</td></tr>';
+                    document.getElementById('filterTotals').innerHTML = '<span>Total de vagas disponíveis: 0</span>';
+                    return;
+                }
+                rows.sort((a,b) => a.local.localeCompare(b.local));
+                tbody.innerHTML = rows.map(r =>
+                    '<tr style="background:#f0fff4;">' +
+                    '<td colspan="2"><strong style="color:#1A4A5F;">' + escapeHtml(r.local) + '</strong></td>' +
+                    '<td><strong style="color:#2E7A6E;">' + r.vagas + '</strong> vaga' + (r.vagas !== 1 ? 's' : '') + ' de ' + r.cap + '</td>' +
+                    '<td>—</td><td>—</td>' +
+                    '<td><span style="color:#2E7A6E; font-weight:600;">Disponível</span></td>' +
+                    '<td></td></tr>'
+                ).join('');
+                const totalVagas = rows.reduce((s,r) => s + r.vagas, 0);
+                document.getElementById('filterTotals').innerHTML = '<span>Total de vagas disponíveis: <strong>' + totalVagas + '</strong></span>';
+                return;
+            }
+
+            // Modo normal
+            let filtered = getFilteredData();
+            if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7">Nenhum resultado</td></tr>'; updateFilterTotals(); return; }
             tbody.innerHTML = filtered.map((item, idx) => {
                 const originalIdx = salesData.findIndex(d => d.empresa === item.empresa && d.local === item.local && d.quantidade === item.quantidade && d.valor === item.valor && d.segmento === item.segmento && d.situacao === item.situacao);
                 const safeIdx = originalIdx !== -1 ? originalIdx : idx;
-                return `<tr data-original-idx="${safeIdx}"><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="empresa" data-value="${escapeHtml(item.empresa)}">${escapeHtml(item.empresa)}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="local" data-value="${escapeHtml(item.local)}">${escapeHtml(item.local)}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="quantidade" data-value="${item.quantidade}">${item.quantidade}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="valor" data-value="${item.valor}">R$ ${item.valor.toLocaleString('pt-BR')}</td><td class="${isAdmin ? 'editable-cell' : 'public-view'}" data-field="segmento" data-value="${escapeHtml(item.segmento)}">${escapeHtml(item.segmento)}</td><td>${isAdmin ? `<select class="status-select" data-original-idx="${safeIdx}"><option ${item.situacao==="Disponível"?'selected':''}>Disponível</option><option ${item.situacao==="Reservado"?'selected':''}>Reservado</option><option ${item.situacao==="Contrato Assinado"?'selected':''}>Contrato Assinado</option></select>` : `<span style="color:${item.situacao==='Contrato Assinado'?'#2E7A6E':(item.situacao==='Reservado'?'#FFC107':'#aaa')}">${item.situacao}</span>`}</td><td>${isAdmin ? `<button class="btn-edit" data-original-idx="${safeIdx}" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-original-idx="${safeIdx}" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>` : ''}</td></tr>`;
+                return '<tr data-original-idx="' + safeIdx + '"><td class="' + (isAdmin ? 'editable-cell' : 'public-view') + '" data-field="empresa" data-value="' + escapeHtml(item.empresa) + '">' + escapeHtml(item.empresa) + '</td><td class="' + (isAdmin ? 'editable-cell' : 'public-view') + '" data-field="local" data-value="' + escapeHtml(item.local) + '">' + escapeHtml(item.local) + '</td><td class="' + (isAdmin ? 'editable-cell' : 'public-view') + '" data-field="quantidade" data-value="' + item.quantidade + '">' + item.quantidade + '</td><td class="' + (isAdmin ? 'editable-cell' : 'public-view') + '" data-field="valor" data-value="' + item.valor + '">R$ ' + item.valor.toLocaleString("pt-BR") + '</td><td class="' + (isAdmin ? 'editable-cell' : 'public-view') + '" data-field="segmento" data-value="' + escapeHtml(item.segmento) + '">' + escapeHtml(item.segmento) + '</td><td>' + (isAdmin ? '<select class="status-select" data-original-idx="' + safeIdx + '"><option ' + (item.situacao==="Disponível"?'selected':'') + '>Disponível</option><option ' + (item.situacao==="Reservado"?'selected':'') + '>Reservado</option><option ' + (item.situacao==="Contrato Assinado"?'selected':'') + '>Contrato Assinado</option></select>' : '<span style="color:' + (item.situacao==="Contrato Assinado"?"#2E7A6E":(item.situacao==="Reservado"?"#FFC107":"#aaa")) + '">' + item.situacao + '</span>') + '</td><td>' + (isAdmin ? '<button class="btn-edit" data-original-idx="' + safeIdx + '" style="background:none; border:none; color:#3498DB; cursor:pointer; margin-right:5px;"><i class="fas fa-edit"></i></button><button class="btn-delete" data-original-idx="' + safeIdx + '" style="background:none; border:none; color:#E67E22; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>' : '') + '</td></tr>';
             }).join('');
             if (isAdmin) { attachEditEvents(); attachDeleteEvents(); attachStatusEvents(); document.querySelectorAll('.btn-edit').forEach(btn => { btn.removeEventListener('click', btn.editHandler); btn.editHandler = () => openEditModal(parseInt(btn.dataset.originalIdx)); btn.addEventListener('click', btn.editHandler); }); }
             updateFilterTotals();
@@ -580,7 +645,50 @@
 
         function closeEditModal() { document.getElementById('editModal').style.display = 'none'; currentEditOriginalIdx = null; }
         async function saveEditModal() { if(currentEditOriginalIdx === null) return; const novaEmpresa = { empresa: document.getElementById('editEmpresa').value, local: document.getElementById('editLocal').value, quantidade: parseInt(document.getElementById('editQuantidade').value) || 1, valor: parseFloat(document.getElementById('editValor').value) || 0, segmento: document.getElementById('editSegmento').value, situacao: document.getElementById('editSituacao').value }; salesData[currentEditOriginalIdx] = novaEmpresa; closeEditModal(); await saveToGitHub(salesData, true); refreshAll(); showToast("Empresa atualizada!"); }
-        function refreshAll() { if(editMode) return; const ocupPercent = updateKPIs(); renderMap(); renderSituacaoTable(); renderTable(); updatePieChart(); updateGauge(ocupPercent); }
+        function renderResumoLocais() {
+            let ocupPorLocal = {};
+            for (let l in locationCapacities) ocupPorLocal[l] = 0;
+            salesData.forEach(i => {
+                if (!ocupPorLocal.hasOwnProperty(i.local)) return;
+                if (i.situacao === "Reservado" || i.situacao === "Contrato Assinado") {
+                    ocupPorLocal[i.local] += (i.quantidade || 1);
+                }
+            });
+            let totalCap = 0, totalOcup = 0;
+            let rows = Object.entries(locationCapacities).map(([local, cap]) => {
+                let ocup = ocupPorLocal[local] || 0;
+                let vagas = Math.max(0, cap - ocup);
+                let perc = Math.min(100, Math.round((ocup / cap) * 100));
+                totalCap += cap; totalOcup += ocup;
+                return { local, cap, ocup, vagas, perc };
+            });
+            rows.sort((a,b) => b.perc - a.perc);
+            let html = rows.map(r => {
+                let cor = r.perc >= 100 ? 'full' : '';
+                let vagasCor = r.vagas === 0 ? '#e74c3c' : (r.vagas <= 2 ? '#E67E22' : '#2E7A6E');
+                return '<tr>' +
+                    '<td><strong>' + r.local + '</strong></td>' +
+                    '<td style="text-align:center;">' + r.cap + '</td>' +
+                    '<td style="text-align:center; color:#856404; font-weight:600;">' + r.ocup + '</td>' +
+                    '<td style="text-align:center; color:' + vagasCor + '; font-weight:700;">' + r.vagas + '</td>' +
+                    '<td style="text-align:center; font-weight:600;">' + r.perc + '%</td>' +
+                    '<td><div class="mini-bar-wrap"><div class="mini-bar-fill ' + cor + '" style="width:' + r.perc + '%;"></div></div></td>' +
+                    '</tr>';
+            }).join('');
+            // Linha de totais
+            let percTotal = Math.min(100, Math.round((totalOcup/totalCap)*100));
+            html += '<tr style="background:#F9F1E8; font-weight:700; border-top:2px solid #e8dccc;">' +
+                '<td>TOTAL</td>' +
+                '<td style="text-align:center;">' + totalCap + '</td>' +
+                '<td style="text-align:center; color:#856404;">' + totalOcup + '</td>' +
+                '<td style="text-align:center; color:#2E7A6E;">' + Math.max(0, totalCap - totalOcup) + '</td>' +
+                '<td style="text-align:center;">' + percTotal + '%</td>' +
+                '<td><div class="mini-bar-wrap"><div class="mini-bar-fill" style="width:' + percTotal + '%;"></div></div></td>' +
+                '</tr>';
+            document.getElementById('resumoLocaisBody').innerHTML = html;
+        }
+
+        function refreshAll() { if(editMode) return; const ocupPercent = updateKPIs(); renderMap(); renderSituacaoTable(); renderResumoLocais(); renderTable(); updatePieChart(); updateGauge(ocupPercent); }
 
         async function exportToPDF() { showToast("Gerando PDF..."); let el = document.getElementById("dashboardToExport"); try { let canvas = await html2canvas(el, { scale:2, useCORS:true, logging:false }); let imgData = canvas.toDataURL('image/png'); let { jsPDF } = window.jspdf; let pdf = new jsPDF('p','mm','a4'); let imgWidth = 210; let imgHeight = (canvas.height * imgWidth) / canvas.width; let heightLeft = imgHeight; let position = 0; pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= 297; while(heightLeft > 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= 297; } pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`); showToast("PDF gerado!"); } catch(e) { showToast("Erro ao gerar PDF", true); } }
         function exportToExcel() { let wsData = [["Empresa","Local","Quantidade","Valor Total (R$)","Segmento","Situação"]]; salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao])); let ws = XLSX.utils.aoa_to_sheet(wsData); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas"); XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`); showToast("Exportado Excel!"); }
