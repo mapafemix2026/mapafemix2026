@@ -292,7 +292,11 @@
                     let local = String(getCelula(row, 0)).trim();
                     let empresa = String(getCelula(row, 1)).trim();
                     let quantidade = parseInt(getCelula(row, 2)) || 1;
-                    let situacao = String(getCelula(row, 3)).trim() || "Disponível";
+                    let situacaoRaw = String(getCelula(row, 3)).trim().toLowerCase();
+                    let situacao = "Disponível";
+                    if (situacaoRaw.includes("contrato")) situacao = "Contrato Assinado";
+                    else if (situacaoRaw.includes("reserv")) situacao = "Reservado";
+                    else if (situacaoRaw.includes("dispon")) situacao = "Disponível";
                     let valorRaw = getCelula(row, 4);
                     let valor;
                     if (typeof valorRaw === "number") {
@@ -309,7 +313,10 @@
                     if (!empresa) continue;
                     if (empresa.toLowerCase() === "empresa" && local.toLowerCase() === "local") continue;
                     if (local === "Externo") local = "Externo - Demais Espaços";
-                    if (!locationCapacities[local]) local = "Externo - Demais Espaços";
+                    if (!locationCapacities[local]) {
+                        console.warn(`Local desconhecido ignorado: "${local}" (empresa: ${empresa})`);
+                        continue; // pula em vez de reclassificar errado
+                    }
 
                     novosDados.push({
                         empresa: empresa,
@@ -420,7 +427,8 @@
             const totalRev = salesData.reduce((s,i)=>s+i.valor,0);
             const totalEmpresas = salesData.length;
             const ticketMedio = totalEmpresas ? totalRev / totalEmpresas : 0;
-            const totalOcup = salesData.reduce((acc,i)=>acc+(i.quantidade||1),0);
+            // Ocupação = somente Reservado + Contrato Assinado
+            const totalOcup = salesData.filter(i => i.situacao === "Reservado" || i.situacao === "Contrato Assinado").reduce((acc,i)=>acc+(i.quantidade||1),0);
             const ocupPercent = Math.min(100, (totalOcup / totalCapacidade) * 100);
             const valorOcupado = salesData.filter(i => i.situacao === "Reservado" || i.situacao === "Contrato Assinado").reduce((acc, i) => acc + i.valor, 0);
             document.getElementById("totalRevenue").innerHTML = `R$ ${totalRev.toLocaleString('pt-BR')}`;
@@ -433,17 +441,21 @@
 
         function renderMap() {
             let stats = {};
-            for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0, receita: 0 };
+            for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0, disponivel_explicito: 0, receita: 0 };
             salesData.forEach(i => {
+                if (!stats[i.local]) return; // ignora locais inválidos silenciosamente
                 let q = i.quantidade || 1;
                 if (i.situacao === "Reservado") stats[i.local].reservado += q;
                 else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
+                else if (i.situacao === "Disponível") stats[i.local].disponivel_explicito += q;
                 stats[i.local].receita += i.valor;
             });
             let grid = document.getElementById("mapGrid");
             grid.innerHTML = "";
             for (let [local, data] of Object.entries(stats)) {
                 let ocupReal = data.reservado + data.contrato;
+                // Disponíveis = capacidade total menos ocupados (nunca negativo)
+                let disponivelReal = Math.max(0, data.total - ocupReal);
                 let perc = Math.min(100, (ocupReal / data.total) * 100);
                 let hasExcess = ocupReal > data.total;
                 let iconMap = { "Tancredão - Ind e Com":"fa-industry","Multiuso - Cdia Trend":"fa-store","Externo - Motos":"fa-motorcycle","Externo - Semi Novos":"fa-car","Externo - Concessionárias":"fa-car-side","Externo - Agropet":"fa-paw","Externo - Parque de Diversões":"fa-tree","Externo - Caminhões":"fa-truck","Externo - Espaços Privilegiados":"fa-crown","Externo - Alimentação":"fa-utensils","Externo - Demais Espaços":"fa-store","Espaço Conceito":"fa-star","Externo - Churrasqueiras":"fa-fire","Restaurante":"fa-utensil-spoon","Espaço Alimentação Show":"fa-apple-alt"};
@@ -458,7 +470,7 @@
                     updateFilterTotals();
                 };
                 let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes além da capacidade">⚠️</span>` : '';
-                card.innerHTML = `<div class="location-header"><div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div><div class="location-icon"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i></div></div><div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div><div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${Math.max(0, data.total - ocupReal)}</span></div>`;
+                card.innerHTML = `<div class="location-header"><div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div><div class="location-icon"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i></div></div><div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div><div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${disponivelReal}</span></div>`;
                 grid.appendChild(card);
             }
         }
@@ -467,6 +479,7 @@
             let stats = {};
             for (let l in locationCapacities) stats[l] = { total: locationCapacities[l], reservado: 0, contrato: 0 };
             salesData.forEach(i => {
+                if (!stats[i.local]) return; // ignora locais inválidos
                 let q = i.quantidade || 1;
                 if (i.situacao === "Reservado") stats[i.local].reservado += q;
                 else if (i.situacao === "Contrato Assinado") stats[i.local].contrato += q;
@@ -540,10 +553,11 @@
             cell.innerHTML = '';
             cell.appendChild(input);
             input.focus();
-            const save = async () => { let val = input.value; if(field === 'valor') val = parseFloat(val) || 0; if(field === 'quantidade') val = parseInt(val) || 1; salesData[originalIdx][field] = val; editMode = false; await saveToGitHub(salesData, true); refreshAll(); showToast("Dados atualizados!"); };
-            const cancel = () => { editMode = false; refreshAll(); };
+            let saved = false;
+            const save = async () => { if(saved) return; saved = true; let val = input.value; if(field === 'valor') val = parseFloat(val) || 0; if(field === 'quantidade') val = parseInt(val) || 1; salesData[originalIdx][field] = val; editMode = false; await saveToGitHub(salesData, true); refreshAll(); showToast("Dados atualizados!"); };
+            const cancel = () => { if(saved) return; saved = true; editMode = false; refreshAll(); };
             input.addEventListener('blur', save);
-            input.addEventListener('keypress', e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') cancel(); });
+            input.addEventListener('keydown', e => { if(e.key === 'Enter') { e.preventDefault(); save(); } if(e.key === 'Escape') cancel(); });
         }
 
         function openEditModal(originalIdx) {
@@ -617,8 +631,9 @@
                 document.getElementById('exportPdfBtn')?.addEventListener('click', exportToPDF); 
                 document.getElementById('refreshDataBtn')?.addEventListener('click', () => carregarDoGoogleSheets());
                 refreshAll(); 
+            } else {
+                refreshAll();
             }
-            refreshAll();
         })();
     </script>
 </body>
