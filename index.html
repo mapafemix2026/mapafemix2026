@@ -230,9 +230,9 @@
             "Externo - Semi Novos": 10,
             "Externo - Motos": 2,
             "Externo - Parque de Diversões": 1,
-            "Espaço Conceito": 1,
+            "Espaço - Conceito": 1,
             "Restaurante": 1,
-            "Alimentação Show": 1,
+            "Espaço Alimentação Show": 1,
             "Externo - Caminhões": 1
         };
         const totalCapacidade = Object.values(locationCapacities).reduce((a,b)=>a+b,0);
@@ -339,12 +339,12 @@
                     if (!empresa) continue;
                     if (empresa.toLowerCase() === "empresa" && local.toLowerCase() === "local") continue;
                     if (local === "Externo") local = "Externo - Demais Espaços";
-                    // Tenta correspondência exata primeiro, depois tolerante (ignora maiúsculas/espaços extras)
+                    // Tenta correspondência exata primeiro, depois tolerante (ignora maiúsculas/espaços extras/acentos)
                     if (!locationCapacities[local]) {
                         const localNorm = local.toLowerCase().replace(/\s+/g, ' ').trim();
                         const match = Object.keys(locationCapacities).find(k => k.toLowerCase().replace(/\s+/g, ' ').trim() === localNorm);
                         if (match) {
-                            local = match; // corrige para o nome exato cadastrado
+                            local = match;
                         } else {
                             console.warn(`Local desconhecido ignorado: "${local}" (empresa: ${empresa})`);
                             continue;
