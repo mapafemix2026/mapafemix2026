@@ -494,7 +494,7 @@
                 let disponivelReal = Math.max(0, data.total - ocupReal);
                 let perc = Math.min(100, (ocupReal / data.total) * 100);
                 let hasExcess = ocupReal > data.total;
-                let iconMap = { "Tancredão - Ind e Com":"fa-industry","Multiuso - Cdia Trend":"fa-store","Externo - Motos":"fa-motorcycle","Externo - Semi Novos":"fa-car","Externo - Concessionárias":"fa-car-side","Externo - Agropet":"fa-paw","Externo - Parque de Diversões":"fa-tree","Externo - Caminhões":"fa-truck","Externo - Espaços Privilegiados":"fa-crown","Externo - Alimentação":"fa-utensils","Externo - Demais Espaços":"fa-store","Espaço Conceito":"fa-star","Externo - Churrasqueiras":"fa-fire","Restaurante":"fa-utensil-spoon","Espaço Alimentação Show":"fa-apple-alt"};
+                let iconMap = { "Tancredão - Ind e Com":"fa-industry","Multiuso - Cdia Trend":"fa-store","Externo - Motos":"fa-motorcycle","Externo - Semi Novos":"fa-car","Externo - Concessionárias":"fa-car-side","Externo - Agropet":"fa-paw","Externo - Parque de Diversões":"fa-tree","Externo - Caminhões":"fa-truck","Externo - Espaços Privilegiados":"fa-crown","Externo - Alimentação":"fa-utensils","Externo - Demais Espaços":"fa-store","Espaço Conceito":"fa-star","Externo - Churrasqueiras":"fa-fire","Restaurante":"fa-utensil-spoon","Alimentação Show":"fa-apple-alt"};
                 let card = document.createElement("div");
                 card.className = `map-location ${currentLocationFilter === local ? 'selected' : ''}`;
                 card.onclick = () => {
