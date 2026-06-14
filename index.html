@@ -176,8 +176,9 @@
                         <tr>
                             <th>Local</th>
                             <th>Capacidade</th>
-                            <th>Ocupado</th>
-                            <th>Vagas</th>
+                            <th>Reservado</th>
+                            <th>Contrato</th>
+                            <th>Disponível</th>
                             <th>% Ocup.</th>
                             <th>Progresso</th>
                         </tr>
@@ -219,21 +220,20 @@
 
         // Capacidades atualizadas
         const locationCapacities = {
-            "Tancredão - Ind e Com": 83,
+            "Tancredão - Ind e Com": 81,
             "Multiuso - Cdia Trend": 18,
-            "Externo - Motos": 2,
-            "Externo - Semi Novos": 10,
-            "Externo - Concessionárias": 12,
-            "Externo - Agropet": 2,
-            "Externo - Parque de Diversões": 1,
-            "Externo - Caminhões": 5,
-            "Externo - Espaços Privilegiados": 5,
             "Externo - Alimentação": 11,
-            "Externo - Demais Espaços": 7,
-            "Espaço Conceito": 1,
+            "Externo - Concessionárias": 7,
+            "Externo - Demais Espaços": 6,
             "Externo - Churrasqueiras": 5,
+            "Externo - Espaços Privilegiados": 5,
+            "Externo - Semi Novos": 10,
+            "Externo - Motos": 2,
+            "Externo - Parque de Diversões": 1,
+            "Espaço Conceito": 1,
             "Restaurante": 1,
-            "Espaço Alimentação Show": 1
+            "Alimentação Show": 1,
+            "Externo - Caminhões": 1
         };
         const totalCapacidade = Object.values(locationCapacities).reduce((a,b)=>a+b,0);
 
@@ -339,9 +339,16 @@
                     if (!empresa) continue;
                     if (empresa.toLowerCase() === "empresa" && local.toLowerCase() === "local") continue;
                     if (local === "Externo") local = "Externo - Demais Espaços";
+                    // Tenta correspondência exata primeiro, depois tolerante (ignora maiúsculas/espaços extras)
                     if (!locationCapacities[local]) {
-                        console.warn(`Local desconhecido ignorado: "${local}" (empresa: ${empresa})`);
-                        continue; // pula em vez de reclassificar errado
+                        const localNorm = local.toLowerCase().replace(/\s+/g, ' ').trim();
+                        const match = Object.keys(locationCapacities).find(k => k.toLowerCase().replace(/\s+/g, ' ').trim() === localNorm);
+                        if (match) {
+                            local = match; // corrige para o nome exato cadastrado
+                        } else {
+                            console.warn(`Local desconhecido ignorado: "${local}" (empresa: ${empresa})`);
+                            continue;
+                        }
                     }
 
                     novosDados.push({
@@ -355,6 +362,9 @@
                 }
                 
                 if (novosDados.length === 0) throw new Error("Nenhum dado válido encontrado");
+
+                const ignoradas = linhas.filter(r => r.c).length - novosDados.length;
+                console.info(`✅ Empresas carregadas: ${novosDados.length} | Ignoradas: ${ignoradas}`);
                 
                 salesData = novosDados;
                 document.getElementById('dataSourceStatus').innerHTML = '<i class="fas fa-cloud-download-alt"></i> Dados carregados da planilha online ✓';
@@ -646,41 +656,45 @@
         function closeEditModal() { document.getElementById('editModal').style.display = 'none'; currentEditOriginalIdx = null; }
         async function saveEditModal() { if(currentEditOriginalIdx === null) return; const novaEmpresa = { empresa: document.getElementById('editEmpresa').value, local: document.getElementById('editLocal').value, quantidade: parseInt(document.getElementById('editQuantidade').value) || 1, valor: parseFloat(document.getElementById('editValor').value) || 0, segmento: document.getElementById('editSegmento').value, situacao: document.getElementById('editSituacao').value }; salesData[currentEditOriginalIdx] = novaEmpresa; closeEditModal(); await saveToGitHub(salesData, true); refreshAll(); showToast("Empresa atualizada!"); }
         function renderResumoLocais() {
-            let ocupPorLocal = {};
-            for (let l in locationCapacities) ocupPorLocal[l] = 0;
+            let reservadoPorLocal = {}, contratoPorLocal = {};
+            for (let l in locationCapacities) { reservadoPorLocal[l] = 0; contratoPorLocal[l] = 0; }
             salesData.forEach(i => {
-                if (!ocupPorLocal.hasOwnProperty(i.local)) return;
-                if (i.situacao === "Reservado" || i.situacao === "Contrato Assinado") {
-                    ocupPorLocal[i.local] += (i.quantidade || 1);
-                }
+                if (!locationCapacities.hasOwnProperty(i.local)) return;
+                let q = i.quantidade || 1;
+                if (i.situacao === "Reservado") reservadoPorLocal[i.local] += q;
+                else if (i.situacao === "Contrato Assinado") contratoPorLocal[i.local] += q;
             });
-            let totalCap = 0, totalOcup = 0;
+            let totalCap = 0, totalRes = 0, totalCon = 0;
             let rows = Object.entries(locationCapacities).map(([local, cap]) => {
-                let ocup = ocupPorLocal[local] || 0;
-                let vagas = Math.max(0, cap - ocup);
+                let res = reservadoPorLocal[local] || 0;
+                let con = contratoPorLocal[local] || 0;
+                let ocup = res + con;
+                let disponivel = Math.max(0, cap - ocup);
                 let perc = Math.min(100, Math.round((ocup / cap) * 100));
-                totalCap += cap; totalOcup += ocup;
-                return { local, cap, ocup, vagas, perc };
+                totalCap += cap; totalRes += res; totalCon += con;
+                return { local, cap, res, con, ocup, disponivel, perc };
             });
             rows.sort((a,b) => b.perc - a.perc);
             let html = rows.map(r => {
                 let cor = r.perc >= 100 ? 'full' : '';
-                let vagasCor = r.vagas === 0 ? '#e74c3c' : (r.vagas <= 2 ? '#E67E22' : '#2E7A6E');
+                let dispCor = r.disponivel === 0 ? '#e74c3c' : (r.disponivel <= 2 ? '#E67E22' : '#2E7A6E');
                 return '<tr>' +
                     '<td><strong>' + r.local + '</strong></td>' +
                     '<td style="text-align:center;">' + r.cap + '</td>' +
-                    '<td style="text-align:center; color:#856404; font-weight:600;">' + r.ocup + '</td>' +
-                    '<td style="text-align:center; color:' + vagasCor + '; font-weight:700;">' + r.vagas + '</td>' +
+                    '<td style="text-align:center; color:#856404; font-weight:600;">' + r.res + '</td>' +
+                    '<td style="text-align:center; color:#155724; font-weight:600;">' + r.con + '</td>' +
+                    '<td style="text-align:center; color:' + dispCor + '; font-weight:700;">' + r.disponivel + '</td>' +
                     '<td style="text-align:center; font-weight:600;">' + r.perc + '%</td>' +
                     '<td><div class="mini-bar-wrap"><div class="mini-bar-fill ' + cor + '" style="width:' + r.perc + '%;"></div></div></td>' +
                     '</tr>';
             }).join('');
-            // Linha de totais
+            let totalOcup = totalRes + totalCon;
             let percTotal = Math.min(100, Math.round((totalOcup/totalCap)*100));
             html += '<tr style="background:#F9F1E8; font-weight:700; border-top:2px solid #e8dccc;">' +
                 '<td>TOTAL</td>' +
                 '<td style="text-align:center;">' + totalCap + '</td>' +
-                '<td style="text-align:center; color:#856404;">' + totalOcup + '</td>' +
+                '<td style="text-align:center; color:#856404;">' + totalRes + '</td>' +
+                '<td style="text-align:center; color:#155724;">' + totalCon + '</td>' +
                 '<td style="text-align:center; color:#2E7A6E;">' + Math.max(0, totalCap - totalOcup) + '</td>' +
                 '<td style="text-align:center;">' + percTotal + '%</td>' +
                 '<td><div class="mini-bar-wrap"><div class="mini-bar-fill" style="width:' + percTotal + '%;"></div></div></td>' +
