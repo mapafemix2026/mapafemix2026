@@ -197,6 +197,38 @@
                 <div><span id="editHint"><i class="fas fa-lock"></i> Modo visualização</span></div>
             </div>
             <div id="filterTotals" class="totals-bar" style="background: #f9f1e8; border-radius: 16px; padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; gap: 2rem; flex-wrap: wrap;"><span>Total de estandes: 0</span><span>Valor total: R$ 0</span></div>
+            <div id="locationSummaryPanel" style="display:none; background: linear-gradient(135deg, #0B2B40, #1A4A5F); border-radius: 20px; padding: 1rem 1.5rem; margin-bottom: 1rem; color: white;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                    <div style="font-weight:800; font-size:1rem;" id="locSumTitle"></div>
+                    <button onclick="currentLocationFilter=null; document.getElementById('locationFilter').value=''; renderMap(); renderTable(); updateFilterTotals(); renderLocationSummary();" style="background:rgba(255,255,255,0.15); border:none; color:white; border-radius:40px; padding:4px 14px; cursor:pointer; font-size:0.75rem;">✕ Limpar filtro</button>
+                </div>
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.8rem;">
+                    <div style="background:rgba(255,255,255,0.12); border-radius:14px; padding:0.6rem 1.2rem; text-align:center; flex:1; min-width:90px;">
+                        <div style="font-size:1.4rem; font-weight:800;" id="locSumCap">—</div>
+                        <div style="font-size:0.7rem; opacity:0.8;">Capacidade Total</div>
+                    </div>
+                    <div style="background:rgba(46,122,110,0.4); border-radius:14px; padding:0.6rem 1.2rem; text-align:center; flex:1; min-width:90px;">
+                        <div style="font-size:1.4rem; font-weight:800;" id="locSumContrato">—</div>
+                        <div style="font-size:0.7rem; opacity:0.8;">Contrato Assinado</div>
+                    </div>
+                    <div style="background:rgba(255,193,7,0.3); border-radius:14px; padding:0.6rem 1.2rem; text-align:center; flex:1; min-width:90px;">
+                        <div style="font-size:1.4rem; font-weight:800;" id="locSumReservado">—</div>
+                        <div style="font-size:0.7rem; opacity:0.8;">Reservados</div>
+                    </div>
+                    <div style="background:rgba(231,76,60,0.3); border-radius:14px; padding:0.6rem 1.2rem; text-align:center; flex:1; min-width:90px;">
+                        <div style="font-size:1.4rem; font-weight:800;" id="locSumDisp">—</div>
+                        <div style="font-size:0.7rem; opacity:0.8;">Disponíveis</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.12); border-radius:14px; padding:0.6rem 1.2rem; text-align:center; flex:1; min-width:90px;">
+                        <div style="font-size:1.4rem; font-weight:800;" id="locSumPerc">—</div>
+                        <div style="font-size:0.7rem; opacity:0.8;">Ocupação</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.12); border-radius:14px; padding:0.6rem 1.2rem; text-align:center; flex:1; min-width:90px;">
+                        <div style="font-size:1.4rem; font-weight:800;" id="locSumValor">—</div>
+                        <div style="font-size:0.7rem; opacity:0.8;">Receita</div>
+                    </div>
+                </div>
+            </div>
             <div class="table-wrapper"><table id="salesTable"><thead><th>Empresa</th><th>Local</th><th>Qtde</th><th>Valor (R$)</th><th>Segmento</th><th>Situação</th><th id="actionsHeader"></th></thead><tbody id="tableBody"></tbody></table></div>
         </div>
 
@@ -224,7 +256,7 @@
             "Multiuso - Cdia Trend": 18,
             "Externo - Alimentação": 11,
             "Externo - Concessionárias": 7,
-            "Externo - Demais Espaços": 9,
+            "Externo - Demais Espaços": 10,
             "Externo - Churrasqueiras": 5,
             "Externo - Espaços Privilegiados": 5,
             "Externo - Semi Novos": 10,
@@ -459,6 +491,35 @@
             document.getElementById('filterTotals').innerHTML = `<span>Total de estandes: ${totalQuant}</span><span>Valor total: R$ ${totalValor.toLocaleString('pt-BR')}</span>`;
         }
 
+        function renderLocationSummary() {
+            const panel = document.getElementById('locationSummaryPanel');
+            if (!currentLocationFilter || !locationCapacities[currentLocationFilter]) {
+                panel.style.display = 'none';
+                return;
+            }
+            const loc = currentLocationFilter;
+            const cap = locationCapacities[loc];
+            let reservado = 0, contrato = 0, receita = 0;
+            salesData.forEach(i => {
+                if (i.local !== loc) return;
+                const q = i.quantidade || 1;
+                if (i.situacao === "Reservado") reservado += q;
+                else if (i.situacao === "Contrato Assinado") contrato += q;
+                receita += i.valor || 0;
+            });
+            const ocup = reservado + contrato;
+            const disp = Math.max(0, cap - ocup);
+            const perc = Math.min(100, Math.round((ocup / cap) * 100));
+            document.getElementById('locSumTitle').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${loc}`;
+            document.getElementById('locSumCap').textContent = cap;
+            document.getElementById('locSumContrato').textContent = contrato;
+            document.getElementById('locSumReservado').textContent = reservado;
+            document.getElementById('locSumDisp').textContent = disp;
+            document.getElementById('locSumPerc').textContent = perc + '%';
+            document.getElementById('locSumValor').textContent = 'R$ ' + receita.toLocaleString('pt-BR');
+            panel.style.display = 'block';
+        }
+
         function updateKPIs() {
             const totalRev = salesData.reduce((s,i)=>s+i.valor,0);
             const totalEmpresas = salesData.length;
@@ -504,6 +565,7 @@
                     renderMap();
                     renderTable();
                     updateFilterTotals();
+                    renderLocationSummary();
                 };
                 let warning = hasExcess ? `<span class="warning-icon" title="Excedente: ${ocupReal - data.total} estandes além da capacidade">⚠️</span>` : '';
                 card.innerHTML = `<div class="location-header"><div class="location-name"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i> ${local} ${warning}</div><div class="location-icon"><i class="fas ${iconMap[local] || 'fa-map-marker'}"></i></div></div><div class="location-stats" style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>💰 R$ ${(data.receita / 1000).toFixed(1)}k</span><span>🏢 ${ocupReal}/${data.total}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${perc}%"></div></div><div class="status-badges"><span class="badge-reservado">Reservados: ${data.reservado}</span><span class="badge-contrato">Contrato: ${data.contrato}</span><span class="badge-disponivel">Disponíveis: ${disponivelReal}</span></div>`;
@@ -702,7 +764,7 @@
             document.getElementById('resumoLocaisBody').innerHTML = html;
         }
 
-        function refreshAll() { if(editMode) return; const ocupPercent = updateKPIs(); renderMap(); renderSituacaoTable(); renderResumoLocais(); renderTable(); updatePieChart(); updateGauge(ocupPercent); }
+        function refreshAll() { if(editMode) return; const ocupPercent = updateKPIs(); renderMap(); renderSituacaoTable(); renderResumoLocais(); renderTable(); updatePieChart(); updateGauge(ocupPercent); renderLocationSummary(); }
 
         async function exportToPDF() { showToast("Gerando PDF..."); let el = document.getElementById("dashboardToExport"); try { let canvas = await html2canvas(el, { scale:2, useCORS:true, logging:false }); let imgData = canvas.toDataURL('image/png'); let { jsPDF } = window.jspdf; let pdf = new jsPDF('p','mm','a4'); let imgWidth = 210; let imgHeight = (canvas.height * imgWidth) / canvas.width; let heightLeft = imgHeight; let position = 0; pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= 297; while(heightLeft > 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= 297; } pdf.save(`FEMIX_${new Date().toISOString().slice(0,19)}.pdf`); showToast("PDF gerado!"); } catch(e) { showToast("Erro ao gerar PDF", true); } }
         function exportToExcel() { let wsData = [["Empresa","Local","Quantidade","Valor Total (R$)","Segmento","Situação"]]; salesData.forEach(i => wsData.push([i.empresa, i.local, i.quantidade, i.valor, i.segmento, i.situacao])); let ws = XLSX.utils.aoa_to_sheet(wsData); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "FEMIX_Vendas"); XLSX.writeFile(wb, `FEMIX_${new Date().toISOString().slice(0,19)}.xlsx`); showToast("Exportado Excel!"); }
@@ -719,7 +781,7 @@
             locSelect.innerHTML = '<option value="">Todos os locais</option>';
             Object.keys(locationCapacities).sort().forEach(loc => { const option = document.createElement('option'); option.value = loc; option.textContent = loc; locSelect.appendChild(option); });
             locSelect.value = currentLocationFilter || '';
-            locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); });
+            locSelect.addEventListener('change', (e) => { currentLocationFilter = e.target.value || null; renderMap(); renderTable(); renderLocationSummary(); });
             const sitSelect = document.getElementById('situationFilter'); sitSelect.value = currentSituationFilter || ''; sitSelect.addEventListener('change', (e) => { currentSituationFilter = e.target.value || null; renderTable(); });
             const sortSelect = document.getElementById('sortOrder'); sortSelect.value = currentSortOrder; sortSelect.addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTable(); });
         }
